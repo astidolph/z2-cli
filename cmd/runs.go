@@ -207,13 +207,14 @@ func paceSecondsPerKm(a strava.Activity) float64 {
 
 func printRunsTable(runs []strava.Activity) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "DATE\tDISTANCE (km)\tTIME\tAVG HR\tPACE (/km)\tPACE (/mi)\tEF")
-	fmt.Fprintln(w, "────\t─────────────\t────\t──────\t──────────\t──────────\t──")
+	fmt.Fprintln(w, "DATE\tDIST (km)\tDIST (mi)\tTIME\tAVG HR\tPACE (/km)\tPACE (/mi)\tEF")
+	fmt.Fprintln(w, "────\t─────────\t─────────\t────\t──────\t──────────\t──────────\t──")
 
 	for _, r := range runs {
 		t, _ := r.StartTime()
 		date := t.Format("02 Jan 2006")
 		distKm := r.Distance / 1000.0
+		distMi := distKm / kmToMile
 		duration := formatDuration(r.MovingTime)
 		paceKm := formatPacePerKm(r.Distance, r.MovingTime)
 		paceMi := formatPacePerMile(r.Distance, r.MovingTime)
@@ -229,7 +230,7 @@ func printRunsTable(runs []strava.Activity) {
 			efStr = fmt.Sprintf("%.4f", ef)
 		}
 
-		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\t%s\t%s\n", date, distKm, duration, hr, paceKm, paceMi, efStr)
+		fmt.Fprintf(w, "%s\t%.2f\t%.2f\t%s\t%s\t%s\t%s\t%s\n", date, distKm, distMi, duration, hr, paceKm, paceMi, efStr)
 	}
 	w.Flush()
 }
@@ -237,7 +238,8 @@ func printRunsTable(runs []strava.Activity) {
 func printSummary(current, prior []strava.Activity, weeks int) {
 	cur := stats.Summarise(current)
 
-	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km total):\n", weeks, cur.Count, cur.TotalKm)
+	totalMi := cur.TotalKm / kmToMile
+	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km / %.1f mi total):\n", weeks, cur.Count, cur.TotalKm, totalMi)
 
 	if cur.AvgEF > 0 {
 		efLine := fmt.Sprintf("  Avg EF:   %.4f", cur.AvgEF)
