@@ -145,15 +145,16 @@ func parseWeekday(s string) (time.Weekday, error) {
 
 func printRunsTable(runs []strava.Activity) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "DATE\tDISTANCE (km)\tTIME\tAVG HR\tPACE (/km)\tEF")
-	fmt.Fprintln(w, "────\t─────────────\t────\t──────\t──────────\t──")
+	fmt.Fprintln(w, "DATE\tDISTANCE (km)\tTIME\tAVG HR\tPACE (/km)\tPACE (/mi)\tEF")
+	fmt.Fprintln(w, "────\t─────────────\t────\t──────\t──────────\t──────────\t──")
 
 	for _, r := range runs {
 		t, _ := r.StartTime()
 		date := t.Format("02 Jan 2006")
 		distKm := r.Distance / 1000.0
 		duration := formatDuration(r.MovingTime)
-		pace := formatPace(r.Distance, r.MovingTime)
+		paceKm := formatPacePerKm(r.Distance, r.MovingTime)
+		paceMi := formatPacePerMile(r.Distance, r.MovingTime)
 
 		hr := "—"
 		if r.HasHeartrate {
@@ -166,7 +167,7 @@ func printRunsTable(runs []strava.Activity) {
 			efStr = fmt.Sprintf("%.4f", ef)
 		}
 
-		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\t%s\n", date, distKm, duration, hr, pace, efStr)
+		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\t%s\t%s\n", date, distKm, duration, hr, paceKm, paceMi, efStr)
 	}
 	w.Flush()
 }
@@ -198,7 +199,8 @@ func printSummary(current, prior []strava.Activity, weeks int) {
 		fmt.Printf("  Avg HR:   %.0f bpm\n", cur.AvgHR)
 	}
 	if cur.AvgPace > 0 {
-		fmt.Printf("  Avg Pace: %s/km\n", formatPaceSeconds(cur.AvgPace))
+		pacePerMile := cur.AvgPace * kmToMile
+		fmt.Printf("  Avg Pace: %s/km (%s/mi)\n", formatPaceSeconds(cur.AvgPace), formatPaceSeconds(pacePerMile))
 	}
 }
 
@@ -218,11 +220,24 @@ func formatDuration(seconds int) string {
 	return fmt.Sprintf("%dm %02ds", m, s)
 }
 
-func formatPace(distMeters float64, seconds int) string {
+const kmToMile = 1.60934
+
+func formatPacePerKm(distMeters float64, seconds int) string {
 	if distMeters == 0 {
 		return "—"
 	}
 	paceSeconds := float64(seconds) / (distMeters / 1000.0)
+	m := int(paceSeconds) / 60
+	s := int(paceSeconds) % 60
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
+func formatPacePerMile(distMeters float64, seconds int) string {
+	if distMeters == 0 {
+		return "—"
+	}
+	distMiles := distMeters / 1000.0 / kmToMile
+	paceSeconds := float64(seconds) / distMiles
 	m := int(paceSeconds) / 60
 	s := int(paceSeconds) % 60
 	return fmt.Sprintf("%d:%02d", m, s)
