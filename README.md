@@ -1,6 +1,6 @@
 # strava-cli
 
-A command-line tool to track your zone 2 training progress by pulling running data from Strava. Built to make it easy to see trends in your Sunday long runs — distance, average heart rate, time, and pace — without manually tabulating data in the Strava UI.
+A command-line tool to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time, and measure aerobic fitness progression — all from the terminal.
 
 ## Prerequisites
 
@@ -14,50 +14,89 @@ A command-line tool to track your zone 2 training progress by pulling running da
 ```bash
 git clone https://github.com/<your-username>/strava-cli.git
 cd strava-cli
-go build -o strava-cli.exe .
+go install .
 ```
+
+This places the binary in your Go bin directory so you can run `strava-cli` from anywhere.
 
 ## Setup
 
-Run the auth command and follow the prompts:
+### 1. Authenticate with Strava
 
 ```bash
-./strava-cli auth
+strava-cli auth
 ```
 
 You'll be asked for your Strava Client ID and Client Secret, then redirected to Strava in your browser to authorize the app. Credentials and tokens are stored locally in `~/.strava-cli/`.
 
-## Usage
-
-### View your Sunday long runs
+### 2. Set your zone 2 heart rate ceiling
 
 ```bash
-./strava-cli runs
+# Set directly
+strava-cli config --zone2-hr 150
+
+# Or calculate from age using the Maffetone formula (180 - age)
+strava-cli config --age 32
 ```
 
-### Customise the time range and day
+This is used to filter runs — only runs with an average HR at or below this value are shown by default.
+
+## Usage
+
+### View your zone 2 runs
 
 ```bash
-# Last 24 weeks of Saturday runs
-./strava-cli runs --weeks 24 --day saturday
+strava-cli runs
+```
+
+### View all runs (skip zone 2 filtering)
+
+```bash
+strava-cli runs --all
+```
+
+### Filter for long runs
+
+```bash
+strava-cli runs --min-distance 12
+```
+
+### Combine filters
+
+```bash
+# Zone 2 long runs on Sundays from the last 24 weeks
+strava-cli runs --min-distance 12 --day sunday --weeks 24
 ```
 
 ### Output
 
 ```
-DATE            DISTANCE (km)  TIME         AVG HR   PACE (/km)
-────            ─────────────  ────         ──────   ──────────
-23 Mar 2026     18.50          1h 42m 30s   142 bpm  5:32
-16 Mar 2026     16.20          1h 28m 15s   145 bpm  5:27
-09 Mar 2026     15.00          1h 22m 00s   140 bpm  5:28
+Zone 2 runs (avg HR ≤ 148 bpm) from the last 12 weeks:
+
+DATE          DISTANCE (km)  TIME         AVG HR    PACE (/km)  EF
+────          ─────────────  ────         ──────    ──────────  ──
+23 Mar 2026   18.50          1h 42m 30s   142 bpm   5:32        0.0211
+16 Mar 2026   12.10          1h 06m 15s   144 bpm   5:27        0.0213
+09 Mar 2026   15.00          1h 22m 00s   140 bpm   5:28        0.0215
+
+Summary (last 12 weeks, 3 runs, 45.6 km total):
+  Avg EF:   0.0213 ↑ (+2.1% vs prior 12 weeks)
+  Avg HR:   142 bpm
+  Avg Pace: 5:29/km
 ```
+
+### Efficiency Factor (EF)
+
+EF is calculated as speed (m/s) divided by average heart rate. A higher EF means you're running faster at the same effort — the key indicator that zone 2 training is working. The summary compares your current period's EF against the prior equivalent period to show your trend.
 
 ### Flags
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--weeks` | `-w` | `12` | Number of weeks to look back |
-| `--day` | `-d` | `sunday` | Day of week to filter |
+| `--day` | `-d` | | Day of week to filter (e.g. sunday, monday) |
+| `--min-distance` | | | Minimum distance in km (e.g. 12 for long runs) |
+| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
 
 ## Project Structure
 
@@ -67,20 +106,17 @@ strava-cli/
 ├── cmd/
 │   ├── root.go              # Root cobra command
 │   ├── auth.go              # Strava OAuth2 authentication
-│   └── runs.go              # Fetch and display runs
+│   ├── config.go            # Training settings (zone 2 HR)
+│   └── runs.go              # Fetch, filter, and display runs
 └── internal/
     ├── auth/
-    │   ├── config.go         # Client ID/secret persistence
+    │   ├── config.go         # Config persistence (API creds + zone 2 HR)
     │   ├── oauth.go          # OAuth2 flow and token refresh
     │   └── token.go          # Token storage
+    ├── stats/
+    │   ├── efficiency.go     # Efficiency factor calculation
+    │   └── summary.go        # Period summaries and trend comparison
     └── strava/
         ├── client.go         # Strava API HTTP client
-        └── filter.go         # Weekday filtering
+        └── filter.go         # Weekday, HR, and distance filters
 ```
-
-## Roadmap
-
-- [ ] Summary statistics (averages, trends over time)
-- [ ] Terminal charts for HR and distance trends
-- [ ] Local caching to reduce API calls
-- [ ] Export to CSV
