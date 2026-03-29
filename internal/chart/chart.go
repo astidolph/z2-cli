@@ -64,9 +64,40 @@ func BuildChartData(runs []strava.Activity) ChartData {
 }
 
 func RenderEF(w io.Writer, data ChartData) error {
-	line := newLine("Efficiency Factor Over Time", "EF (speed/HR)")
+	line := charts.NewLine()
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "Efficiency Factor & Heart Rate Over Time",
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Name:      "EF (speed/HR)",
+			AxisLabel: &opts.AxisLabel{Formatter: "{value}"},
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show:    opts.Bool(true),
+			Trigger: "axis",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1200px",
+			Height: "500px",
+			Theme:  "dark",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	line.ExtendYAxis(opts.YAxis{
+		Name:      "HR (bpm)",
+		AxisLabel: &opts.AxisLabel{Formatter: "{value}"},
+	})
+
 	line.SetXAxis(data.Dates).
-		AddSeries("EF", data.EF)
+		AddSeries("EF", data.EF).
+		AddSeries("Avg HR", data.HR, charts.WithLineChartOpts(opts.LineChart{
+			YAxisIndex: 1,
+		}))
+
 	return line.Render(w)
 }
 
