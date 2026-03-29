@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 	"time"
 
@@ -17,6 +18,8 @@ var (
 	dayFilter   string
 	showAll     bool
 	minDistance  float64
+	sortBy      string
+	ascending   bool
 )
 
 var runsCmd = &cobra.Command{
@@ -88,6 +91,10 @@ Use --day to filter to a specific day of the week.`,
 			return nil
 		}
 
+		if err := sortRuns(currentRuns, sortBy, ascending); err != nil {
+			return err
+		}
+
 		printRunsTable(currentRuns)
 		printSummary(currentRuns, priorRuns, weeksBack)
 		return nil
@@ -100,6 +107,8 @@ func init() {
 	runsCmd.Flags().StringVarP(&dayFilter, "day", "d", "", "Day of week to filter (e.g. sunday, monday)")
 	runsCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all runs, skip zone 2 filtering")
 	runsCmd.Flags().Float64Var(&minDistance, "min-distance", 0, "Minimum distance in km (e.g. 12 for long runs)")
+	runsCmd.Flags().StringVar(&sortBy, "sort", "date", "Sort by: date, distance, time, hr, pace, ef")
+	runsCmd.Flags().BoolVar(&ascending, "asc", false, "Sort in ascending order (default is descending)")
 }
 
 func getValidToken() (*auth.Token, error) {
@@ -141,6 +150,59 @@ func parseWeekday(s string) (time.Weekday, error) {
 		return 0, fmt.Errorf("invalid day: %s", s)
 	}
 	return day, nil
+}
+
+func sortRuns(runs []strava.Activity, by string, asc bool) error {
+	var less func(i, j int) bool
+
+	switch by {
+	case "date":
+		less = func(i, j int) bool {
+			ti, _ := runs[i].StartTime()
+			tj, _ := runs[j].StartTime()
+			return ti.After(tj)
+		}
+	case "distance":
+		less = func(i, j int) bool {
+			return runs[i].Distance > runs[j].Distance
+		}
+	case "time":
+		less = func(i, j int) bool {
+			return runs[i].MovingTime > runs[j].MovingTime
+		}
+	case "hr":
+		less = func(i, j int) bool {
+			return runs[i].AverageHeartrate > runs[j].AverageHeartrate
+		}
+	case "pace":
+		less = func(i, j int) bool {
+			// Lower pace seconds = faster, so "descending" means fastest first
+			pi := paceSecondsPerKm(runs[i])
+			pj := paceSecondsPerKm(runs[j])
+			return pi < pj
+		}
+	case "ef":
+		less = func(i, j int) bool {
+			return stats.EfficiencyFactor(runs[i]) > stats.EfficiencyFactor(runs[j])
+		}
+	default:
+		return fmt.Errorf("invalid sort column: %s (options: date, distance, time, hr, pace, ef)", by)
+	}
+
+	if asc {
+		original := less
+		less = func(i, j int) bool { return !original(i, j) }
+	}
+
+	sort.SliceStable(runs, less)
+	return nil
+}
+
+func paceSecondsPerKm(a strava.Activity) float64 {
+	if a.Distance == 0 {
+		return 0
+	}
+	return float64(a.MovingTime) / (a.Distance / 1000.0)
 }
 
 func printRunsTable(runs []strava.Activity) {
