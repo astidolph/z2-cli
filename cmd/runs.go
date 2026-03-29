@@ -35,8 +35,11 @@ Use --day to filter to a specific day of the week.`,
 
 		client := strava.NewClient(token.AccessToken)
 
-		since := time.Now().AddDate(0, 0, -weeksBack*7)
-		runs, err := client.GetAllRunsSince(since)
+		now := time.Now()
+		since := now.AddDate(0, 0, -weeksBack*7)
+		priorSince := since.AddDate(0, 0, -weeksBack*7)
+
+		runs, err := client.GetAllRunsSince(priorSince)
 		if err != nil {
 			return fmt.Errorf("could not fetch runs: %w", err)
 		}
@@ -67,12 +70,26 @@ Use --day to filter to a specific day of the week.`,
 			fmt.Printf("All runs from the last %d weeks:\n\n", weeksBack)
 		}
 
-		if len(runs) == 0 {
+		var currentRuns, priorRuns []strava.Activity
+		for _, r := range runs {
+			t, err := r.StartTime()
+			if err != nil {
+				continue
+			}
+			if t.After(since) {
+				currentRuns = append(currentRuns, r)
+			} else {
+				priorRuns = append(priorRuns, r)
+			}
+		}
+
+		if len(currentRuns) == 0 {
 			fmt.Println("No matching runs found.")
 			return nil
 		}
 
-		printRunsTable(runs)
+		printRunsTable(currentRuns)
+		printSummary(currentRuns, priorRuns, weeksBack)
 		return nil
 	},
 }
@@ -152,6 +169,43 @@ func printRunsTable(runs []strava.Activity) {
 		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\t%s\n", date, distKm, duration, hr, pace, efStr)
 	}
 	w.Flush()
+}
+
+func printSummary(current, prior []strava.Activity, weeks int) {
+	cur := stats.Summarise(current)
+
+	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km total):\n", weeks, cur.Count, cur.TotalKm)
+
+	if cur.AvgEF > 0 {
+		efLine := fmt.Sprintf("  Avg EF:   %.4f", cur.AvgEF)
+		if len(prior) > 0 {
+			prev := stats.Summarise(prior)
+			if prev.AvgEF > 0 {
+				trend := stats.TrendPercent(cur, prev)
+				arrow := "→"
+				if trend > 0 {
+					arrow = "↑"
+				} else if trend < 0 {
+					arrow = "↓"
+				}
+				efLine += fmt.Sprintf(" %s (%+.1f%% vs prior %d weeks)", arrow, trend, weeks)
+			}
+		}
+		fmt.Println(efLine)
+	}
+
+	if cur.AvgHR > 0 {
+		fmt.Printf("  Avg HR:   %.0f bpm\n", cur.AvgHR)
+	}
+	if cur.AvgPace > 0 {
+		fmt.Printf("  Avg Pace: %s/km\n", formatPaceSeconds(cur.AvgPace))
+	}
+}
+
+func formatPaceSeconds(totalSeconds float64) string {
+	m := int(totalSeconds) / 60
+	s := int(totalSeconds) % 60
+	return fmt.Sprintf("%d:%02d", m, s)
 }
 
 func formatDuration(seconds int) string {
