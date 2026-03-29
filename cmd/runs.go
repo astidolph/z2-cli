@@ -3,23 +3,21 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"sort"
 	"text/tabwriter"
-	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/z2-cli/internal/auth"
+	"github.com/z2-cli/internal/service"
 	"github.com/z2-cli/internal/stats"
 	"github.com/z2-cli/internal/strava"
 )
 
 var (
-	weeksBack   int
-	dayFilter   string
-	showAll     bool
-	minDistance  float64
-	sortBy      string
-	ascending   bool
+	weeksBack  int
+	dayFilter  string
+	showAll    bool
+	minDistance float64
+	sortBy     string
+	ascending  bool
 )
 
 var runsCmd = &cobra.Command{
@@ -31,72 +29,31 @@ By default, only shows zone 2 runs (requires zone 2 HR to be set via 'z2-cli con
 Use --all to show all runs regardless of heart rate.
 Use --day to filter to a specific day of the week.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token, err := getValidToken()
+		result, err := service.FetchRuns(service.RunsQuery{
+			WeeksBack:  weeksBack,
+			Day:        dayFilter,
+			MinDistance: minDistance,
+			ShowAll:    showAll,
+			SortBy:     sortBy,
+			Ascending:  ascending,
+		})
 		if err != nil {
 			return err
 		}
 
-		client := strava.NewClient(token.AccessToken)
-
-		now := time.Now()
-		since := now.AddDate(0, 0, -weeksBack*7)
-		priorSince := since.AddDate(0, 0, -weeksBack*7)
-
-		runs, err := client.GetAllRunsSince(priorSince)
-		if err != nil {
-			return fmt.Errorf("could not fetch runs: %w", err)
-		}
-
-		if dayFilter != "" {
-			day, err := parseWeekday(dayFilter)
-			if err != nil {
-				return err
-			}
-			runs = strava.FilterByWeekday(runs, day)
-		}
-
-		if minDistance > 0 {
-			runs = strava.FilterByMinDistance(runs, minDistance)
-		}
-
-		if !showAll {
-			config, err := auth.LoadConfig()
-			if err != nil {
-				return err
-			}
-			if config.Zone2HR == 0 {
-				return fmt.Errorf("zone 2 HR not set — run 'z2-cli config --zone2-hr <value>' or use --all to skip filtering")
-			}
-			runs = strava.FilterByMaxHR(runs, float64(config.Zone2HR))
-			fmt.Printf("Zone 2 runs (avg HR ≤ %d bpm) from the last %d weeks:\n\n", config.Zone2HR, weeksBack)
+		if result.Zone2HR > 0 {
+			fmt.Printf("Zone 2 runs (avg HR ≤ %d bpm) from the last %d weeks:\n\n", result.Zone2HR, weeksBack)
 		} else {
 			fmt.Printf("All runs from the last %d weeks:\n\n", weeksBack)
 		}
 
-		var currentRuns, priorRuns []strava.Activity
-		for _, r := range runs {
-			t, err := r.StartTime()
-			if err != nil {
-				continue
-			}
-			if t.After(since) {
-				currentRuns = append(currentRuns, r)
-			} else {
-				priorRuns = append(priorRuns, r)
-			}
-		}
-
-		if len(currentRuns) == 0 {
+		if len(result.CurrentRuns) == 0 {
 			fmt.Println("No matching runs found.")
 			return nil
 		}
 
-		if err := sortRuns(currentRuns, sortBy, ascending); err != nil {
-			return err
-		}
-
-		printRunsTable(currentRuns)
-		printSummary(currentRuns, priorRuns, weeksBack)
+		printRunsTable(result.CurrentRuns)
+		printSummary(result)
 		return nil
 	},
 }
@@ -109,100 +66,6 @@ func init() {
 	runsCmd.Flags().Float64Var(&minDistance, "min-distance", 0, "Minimum distance in km (e.g. 12 for long runs)")
 	runsCmd.Flags().StringVar(&sortBy, "sort", "date", "Sort by: date, distance, time, hr, pace, ef")
 	runsCmd.Flags().BoolVar(&ascending, "asc", false, "Sort in ascending order (default is descending)")
-}
-
-func getValidToken() (*auth.Token, error) {
-	config, err := auth.LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := auth.LoadToken()
-	if err != nil {
-		return nil, err
-	}
-
-	if token.IsExpired() {
-		token, err = auth.RefreshAccessToken(config.ClientID, config.ClientSecret, token)
-		if err != nil {
-			return nil, fmt.Errorf("could not refresh token: %w", err)
-		}
-		if err := auth.SaveToken(token); err != nil {
-			return nil, fmt.Errorf("could not save refreshed token: %w", err)
-		}
-	}
-
-	return token, nil
-}
-
-func parseWeekday(s string) (time.Weekday, error) {
-	days := map[string]time.Weekday{
-		"sunday":    time.Sunday,
-		"monday":    time.Monday,
-		"tuesday":   time.Tuesday,
-		"wednesday": time.Wednesday,
-		"thursday":  time.Thursday,
-		"friday":    time.Friday,
-		"saturday":  time.Saturday,
-	}
-	day, ok := days[s]
-	if !ok {
-		return 0, fmt.Errorf("invalid day: %s", s)
-	}
-	return day, nil
-}
-
-func sortRuns(runs []strava.Activity, by string, asc bool) error {
-	var less func(i, j int) bool
-
-	switch by {
-	case "date":
-		less = func(i, j int) bool {
-			ti, _ := runs[i].StartTime()
-			tj, _ := runs[j].StartTime()
-			return ti.After(tj)
-		}
-	case "distance":
-		less = func(i, j int) bool {
-			return runs[i].Distance > runs[j].Distance
-		}
-	case "time":
-		less = func(i, j int) bool {
-			return runs[i].MovingTime > runs[j].MovingTime
-		}
-	case "hr":
-		less = func(i, j int) bool {
-			return runs[i].AverageHeartrate > runs[j].AverageHeartrate
-		}
-	case "pace":
-		less = func(i, j int) bool {
-			// Lower pace seconds = faster, so "descending" means fastest first
-			pi := paceSecondsPerKm(runs[i])
-			pj := paceSecondsPerKm(runs[j])
-			return pi < pj
-		}
-	case "ef":
-		less = func(i, j int) bool {
-			return stats.EfficiencyFactor(runs[i]) > stats.EfficiencyFactor(runs[j])
-		}
-	default:
-		return fmt.Errorf("invalid sort column: %s (options: date, distance, time, hr, pace, ef)", by)
-	}
-
-	if asc {
-		original := less
-		less = func(i, j int) bool { return !original(i, j) }
-	}
-
-	sort.SliceStable(runs, less)
-	return nil
-}
-
-func paceSecondsPerKm(a strava.Activity) float64 {
-	if a.Distance == 0 {
-		return 0
-	}
-	return float64(a.MovingTime) / (a.Distance / 1000.0)
 }
 
 func printRunsTable(runs []strava.Activity) {
@@ -235,26 +98,23 @@ func printRunsTable(runs []strava.Activity) {
 	w.Flush()
 }
 
-func printSummary(current, prior []strava.Activity, weeks int) {
-	cur := stats.Summarise(current)
+func printSummary(result *service.RunsResult) {
+	cur := result.Current
 
 	totalMi := cur.TotalKm / kmToMile
-	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km / %.1f mi total):\n", weeks, cur.Count, cur.TotalKm, totalMi)
+	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km / %.1f mi total):\n", result.WeeksBack, cur.Count, cur.TotalKm, totalMi)
 
 	if cur.AvgEF > 0 {
 		efLine := fmt.Sprintf("  Avg EF:   %.4f", cur.AvgEF)
-		if len(prior) > 0 {
-			prev := stats.Summarise(prior)
-			if prev.AvgEF > 0 {
-				trend := stats.TrendPercent(cur, prev)
-				arrow := "→"
-				if trend > 0 {
-					arrow = "↑"
-				} else if trend < 0 {
-					arrow = "↓"
-				}
-				efLine += fmt.Sprintf(" %s (%+.1f%% vs prior %d weeks)", arrow, trend, weeks)
+		if result.Prior.AvgEF > 0 {
+			trend := stats.TrendPercent(cur, result.Prior)
+			arrow := "→"
+			if trend > 0 {
+				arrow = "↑"
+			} else if trend < 0 {
+				arrow = "↓"
 			}
+			efLine += fmt.Sprintf(" %s (%+.1f%% vs prior %d weeks)", arrow, trend, result.WeeksBack)
 		}
 		fmt.Println(efLine)
 	}
