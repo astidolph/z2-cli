@@ -10,6 +10,13 @@ import (
 type Config struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+	MaxHR        int    `json:"max_hr,omitempty"`
+}
+
+func (c *Config) Zone2Range() (float64, float64) {
+	low := float64(c.MaxHR) * 0.60
+	high := float64(c.MaxHR) * 0.70
+	return low, high
 }
 
 func configPath() (string, error) {

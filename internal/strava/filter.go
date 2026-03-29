@@ -15,3 +15,13 @@ func FilterByWeekday(activities []Activity, day time.Weekday) []Activity {
 	}
 	return filtered
 }
+
+func FilterByZone2(activities []Activity, lowHR, highHR float64) []Activity {
+	var filtered []Activity
+	for _, a := range activities {
+		if a.HasHeartrate && a.AverageHeartrate >= lowHR && a.AverageHeartrate <= highHR {
+			filtered = append(filtered, a)
+		}
+	}
+	return filtered
+}
