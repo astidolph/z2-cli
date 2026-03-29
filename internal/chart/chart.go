@@ -3,6 +3,8 @@ package chart
 import (
 	"fmt"
 	"io"
+	"math"
+	"strconv"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -63,7 +65,39 @@ func BuildChartData(runs []strava.Activity) ChartData {
 	return data
 }
 
+func dataRange(series []opts.LineData, padding float64) (float64, float64) {
+	min := math.MaxFloat64
+	max := -math.MaxFloat64
+	for _, d := range series {
+		var v float64
+		switch val := d.Value.(type) {
+		case string:
+			v, _ = strconv.ParseFloat(val, 64)
+		case float64:
+			v = val
+		case int:
+			v = float64(val)
+		default:
+			continue
+		}
+		if v == 0 {
+			continue
+		}
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+	spread := max - min
+	return min - spread*padding, max + spread*padding
+}
+
 func RenderEF(w io.Writer, data ChartData) error {
+	efMin, efMax := dataRange(data.EF, 0.2)
+	hrMin, hrMax := dataRange(data.HR, 0.2)
+
 	line := charts.NewLine()
 	line.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
@@ -71,6 +105,8 @@ func RenderEF(w io.Writer, data ChartData) error {
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
 			Name:      "EF (speed/HR)",
+			Min:       fmt.Sprintf("%.4f", efMin),
+			Max:       fmt.Sprintf("%.4f", efMax),
 			AxisLabel: &opts.AxisLabel{Formatter: "{value}"},
 		}),
 		charts.WithTooltipOpts(opts.Tooltip{
@@ -89,6 +125,8 @@ func RenderEF(w io.Writer, data ChartData) error {
 
 	line.ExtendYAxis(opts.YAxis{
 		Name:      "HR (bpm)",
+		Min:       math.Floor(hrMin),
+		Max:       math.Ceil(hrMax),
 		AxisLabel: &opts.AxisLabel{Formatter: "{value}"},
 	})
 
