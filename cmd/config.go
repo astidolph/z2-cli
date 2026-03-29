@@ -7,34 +7,54 @@ import (
 	"github.com/strava-cli/internal/auth"
 )
 
-var maxHR int
+var (
+	zone2HR int
+	age     int
+)
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Configure your training settings",
-	Long: `Set your max heart rate to enable zone 2 filtering.
+	Long: `Set your zone 2 heart rate ceiling to enable filtering.
 
-Zone 2 is calculated as 60-70% of your max heart rate.
-Example: max HR of 190 → zone 2 is 114-133 bpm.`,
+You can set it directly or calculate from your age using the Maffetone formula (180 - age).
+
+Examples:
+  strava-cli config --zone2-hr 150
+  strava-cli config --age 30          # sets zone 2 HR to 150 (180 - 30)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !cmd.Flags().Changed("max-hr") {
+		hrChanged := cmd.Flags().Changed("zone2-hr")
+		ageChanged := cmd.Flags().Changed("age")
+
+		if !hrChanged && !ageChanged {
 			config, err := auth.LoadConfig()
 			if err != nil {
-				fmt.Println("No configuration found. Use --max-hr to set your max heart rate.")
+				fmt.Println("No configuration found. Use --zone2-hr or --age to set your zone 2 ceiling.")
 				return nil
 			}
-			if config.MaxHR == 0 {
-				fmt.Println("Max HR not set. Use --max-hr to set your max heart rate.")
+			if config.Zone2HR == 0 {
+				fmt.Println("Zone 2 HR not set. Use --zone2-hr or --age to set your zone 2 ceiling.")
 			} else {
-				low, high := config.Zone2Range()
-				fmt.Printf("Max HR:  %d bpm\n", config.MaxHR)
-				fmt.Printf("Zone 2:  %.0f-%.0f bpm\n", low, high)
+				fmt.Printf("Zone 2 HR ceiling: %d bpm\n", config.Zone2HR)
+				fmt.Println("Runs with average HR at or below this value are considered zone 2.")
 			}
 			return nil
 		}
 
-		if maxHR < 100 || maxHR > 250 {
-			return fmt.Errorf("max HR should be between 100 and 250, got %d", maxHR)
+		if hrChanged && ageChanged {
+			return fmt.Errorf("use either --zone2-hr or --age, not both")
+		}
+
+		hr := zone2HR
+		if ageChanged {
+			if age < 10 || age > 100 {
+				return fmt.Errorf("age should be between 10 and 100, got %d", age)
+			}
+			hr = 180 - age
+		}
+
+		if hr < 80 || hr > 200 {
+			return fmt.Errorf("zone 2 HR should be between 80 and 200, got %d", hr)
 		}
 
 		config, err := auth.LoadConfig()
@@ -42,18 +62,22 @@ Example: max HR of 190 → zone 2 is 114-133 bpm.`,
 			config = &auth.Config{}
 		}
 
-		config.MaxHR = maxHR
+		config.Zone2HR = hr
 		if err := auth.SaveConfig(config); err != nil {
 			return fmt.Errorf("could not save config: %w", err)
 		}
 
-		low, high := config.Zone2Range()
-		fmt.Printf("Max HR set to %d bpm. Zone 2 range: %.0f-%.0f bpm\n", maxHR, low, high)
+		if ageChanged {
+			fmt.Printf("Zone 2 HR ceiling set to %d bpm (180 - %d)\n", hr, age)
+		} else {
+			fmt.Printf("Zone 2 HR ceiling set to %d bpm\n", hr)
+		}
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	configCmd.Flags().IntVar(&maxHR, "max-hr", 0, "Your maximum heart rate in bpm")
+	configCmd.Flags().IntVar(&zone2HR, "zone2-hr", 0, "Zone 2 heart rate ceiling in bpm")
+	configCmd.Flags().IntVar(&age, "age", 0, "Your age (calculates zone 2 HR as 180 - age)")
 }
