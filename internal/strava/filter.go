@@ -25,3 +25,14 @@ func FilterByMaxHR(activities []Activity, maxHR float64) []Activity {
 	}
 	return filtered
 }
+
+func FilterByMinDistance(activities []Activity, minKm float64) []Activity {
+	var filtered []Activity
+	minMeters := minKm * 1000.0
+	for _, a := range activities {
+		if a.Distance >= minMeters {
+			filtered = append(filtered, a)
+		}
+	}
+	return filtered
+}

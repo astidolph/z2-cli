@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	weeksBack int
-	dayFilter string
-	showAll   bool
+	weeksBack   int
+	dayFilter   string
+	showAll     bool
+	minDistance  float64
 )
 
 var runsCmd = &cobra.Command{
@@ -47,6 +48,10 @@ Use --day to filter to a specific day of the week.`,
 			runs = strava.FilterByWeekday(runs, day)
 		}
 
+		if minDistance > 0 {
+			runs = strava.FilterByMinDistance(runs, minDistance)
+		}
+
 		if !showAll {
 			config, err := auth.LoadConfig()
 			if err != nil {
@@ -76,6 +81,7 @@ func init() {
 	runsCmd.Flags().IntVarP(&weeksBack, "weeks", "w", 12, "Number of weeks to look back")
 	runsCmd.Flags().StringVarP(&dayFilter, "day", "d", "", "Day of week to filter (e.g. sunday, monday)")
 	runsCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all runs, skip zone 2 filtering")
+	runsCmd.Flags().Float64Var(&minDistance, "min-distance", 0, "Minimum distance in km (e.g. 12 for long runs)")
 }
 
 func getValidToken() (*auth.Token, error) {
