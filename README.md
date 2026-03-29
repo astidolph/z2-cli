@@ -81,23 +81,48 @@ z2-cli runs --min-distance 12 --day sunday --weeks 24
 ```
 Zone 2 runs (avg HR ≤ 148 bpm) from the last 12 weeks:
 
-DATE          DISTANCE (km)  TIME         AVG HR    PACE (/km)  PACE (/mi)  EF
-────          ─────────────  ────         ──────    ──────────  ──────────  ──
-23 Mar 2026   18.50          1h 42m 30s   142 bpm   5:32        8:54        0.0211
-16 Mar 2026   12.10          1h 06m 15s   144 bpm   5:27        8:46        0.0213
-09 Mar 2026   15.00          1h 22m 00s   140 bpm   5:28        8:48        0.0215
+DATE          DIST (km)  DIST (mi)  TIME         AVG HR    PACE (/km)  PACE (/mi)  EF
+────          ─────────  ─────────  ────         ──────    ──────────  ──────────  ──
+23 Mar 2026   18.50      11.49      1h 42m 30s   142 bpm   5:32        8:54        0.0211
+16 Mar 2026   12.10      7.52       1h 06m 15s   144 bpm   5:27        8:46        0.0213
+09 Mar 2026   15.00      9.32       1h 22m 00s   140 bpm   5:28        8:48        0.0215
 
-Summary (last 12 weeks, 3 runs, 45.6 km total):
+Summary (last 12 weeks, 3 runs, 45.6 km / 28.3 mi total):
   Avg EF:   0.0213 ↑ (+2.1% vs prior 12 weeks)
   Avg HR:   142 bpm
   Avg Pace: 5:29/km (8:49/mi)
 ```
 
+### Charts
+
+Generate interactive charts that open in your browser:
+
+```bash
+z2-cli chart                        # EF trend (default)
+z2-cli chart --type pace            # pace over time (km + mi)
+z2-cli chart --type distance        # distance over time (km + mi)
+z2-cli chart --type hr              # heart rate over time
+z2-cli chart --type all             # all charts on one page
+z2-cli chart --weeks 24 --type all  # last 24 weeks, all charts
+```
+
+Charts support the same filtering flags as the `runs` command (`--weeks`, `--day`, `--min-distance`, `--all`).
+
+#### Chart flags
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--type` | `-t` | `ef` | Chart type: ef, pace, distance, hr, all |
+| `--weeks` | `-w` | `12` | Number of weeks to look back |
+| `--day` | `-d` | | Day of week to filter |
+| `--min-distance` | | | Minimum distance in km |
+| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
+
 ### Efficiency Factor (EF)
 
 EF is calculated as speed (m/s) divided by average heart rate. A higher EF means you're running faster at the same effort — the key indicator that zone 2 training is working. The summary compares your current period's EF against the prior equivalent period to show your trend.
 
-### Flags
+### Runs flags
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
@@ -116,13 +141,18 @@ z2-cli/
 ├── cmd/
 │   ├── root.go              # Root cobra command
 │   ├── auth.go              # Strava OAuth2 authentication
+│   ├── chart.go             # Interactive HTML chart generation
 │   ├── config.go            # Training settings (zone 2 HR)
-│   └── runs.go              # Fetch, filter, and display runs
+│   └── runs.go              # Table display and formatting
 └── internal/
     ├── auth/
     │   ├── config.go         # Config persistence (API creds + zone 2 HR)
     │   ├── oauth.go          # OAuth2 flow and token refresh
     │   └── token.go          # Token storage
+    ├── chart/
+    │   └── chart.go          # go-echarts chart rendering (EF, pace, distance, HR)
+    ├── service/
+    │   └── runs.go           # Core data logic (fetch, filter, sort, summarise)
     ├── stats/
     │   ├── efficiency.go     # Efficiency factor calculation
     │   └── summary.go        # Period summaries and trend comparison
