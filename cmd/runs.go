@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/strava-cli/internal/auth"
-	"github.com/strava-cli/internal/stats"
-	"github.com/strava-cli/internal/strava"
+	"github.com/z2-cli/internal/auth"
+	"github.com/z2-cli/internal/stats"
+	"github.com/z2-cli/internal/strava"
 )
 
 var (
@@ -27,7 +27,7 @@ var runsCmd = &cobra.Command{
 	Short: "Display your running data",
 	Long: `Fetch and display your runs from Strava.
 
-By default, only shows zone 2 runs (requires zone 2 HR to be set via 'strava-cli config').
+By default, only shows zone 2 runs (requires zone 2 HR to be set via 'z2-cli config').
 Use --all to show all runs regardless of heart rate.
 Use --day to filter to a specific day of the week.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -65,7 +65,7 @@ Use --day to filter to a specific day of the week.`,
 				return err
 			}
 			if config.Zone2HR == 0 {
-				return fmt.Errorf("zone 2 HR not set — run 'strava-cli config --zone2-hr <value>' or use --all to skip filtering")
+				return fmt.Errorf("zone 2 HR not set — run 'z2-cli config --zone2-hr <value>' or use --all to skip filtering")
 			}
 			runs = strava.FilterByMaxHR(runs, float64(config.Zone2HR))
 			fmt.Printf("Zone 2 runs (avg HR ≤ %d bpm) from the last %d weeks:\n\n", config.Zone2HR, weeksBack)

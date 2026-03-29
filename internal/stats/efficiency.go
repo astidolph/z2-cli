@@ -1,6 +1,6 @@
 package stats
 
-import "github.com/strava-cli/internal/strava"
+import "github.com/z2-cli/internal/strava"
 
 // EfficiencyFactor calculates speed (m/s) divided by average heart rate.
 // A higher value means better aerobic efficiency — running faster at the same effort.

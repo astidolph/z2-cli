@@ -1,6 +1,6 @@
 package stats
 
-import "github.com/strava-cli/internal/strava"
+import "github.com/z2-cli/internal/strava"
 
 type Summary struct {
 	Count    int

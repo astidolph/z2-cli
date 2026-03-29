@@ -1,4 +1,4 @@
-# strava-cli
+# z2-cli
 
 A command-line tool to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time, and measure aerobic fitness progression — all from the terminal.
 
@@ -12,31 +12,31 @@ A command-line tool to track your zone 2 training progress by pulling running da
 ## Installation
 
 ```bash
-git clone https://github.com/<your-username>/strava-cli.git
-cd strava-cli
+git clone https://github.com/<your-username>/z2-cli.git
+cd z2-cli
 go install .
 ```
 
-This places the binary in your Go bin directory so you can run `strava-cli` from anywhere.
+This places the binary in your Go bin directory so you can run `z2-cli` from anywhere.
 
 ## Setup
 
 ### 1. Authenticate with Strava
 
 ```bash
-strava-cli auth
+z2-cli auth
 ```
 
-You'll be asked for your Strava Client ID and Client Secret, then redirected to Strava in your browser to authorize the app. Credentials and tokens are stored locally in `~/.strava-cli/`.
+You'll be asked for your Strava Client ID and Client Secret, then redirected to Strava in your browser to authorize the app. Credentials and tokens are stored locally in `~/.z2-cli/`.
 
 ### 2. Set your zone 2 heart rate ceiling
 
 ```bash
 # Set directly
-strava-cli config --zone2-hr 150
+z2-cli config --zone2-hr 150
 
 # Or calculate from age using the Maffetone formula (180 - age)
-strava-cli config --age 32
+z2-cli config --age 32
 ```
 
 This is used to filter runs — only runs with an average HR at or below this value are shown by default.
@@ -46,7 +46,7 @@ This is used to filter runs — only runs with an average HR at or below this va
 ### View your zone 2 runs sorted by efficiency
 
 ```bash
-strava-cli runs --sort ef
+z2-cli runs --sort ef
 ```
 
 This is the most useful command for tracking progress — it shows your zone 2 runs ranked by efficiency factor (EF), so your most aerobically efficient runs are at the top.
@@ -54,26 +54,26 @@ This is the most useful command for tracking progress — it shows your zone 2 r
 ### View your zone 2 runs
 
 ```bash
-strava-cli runs
+z2-cli runs
 ```
 
 ### View all runs (skip zone 2 filtering)
 
 ```bash
-strava-cli runs --all
+z2-cli runs --all
 ```
 
 ### Filter for long runs
 
 ```bash
-strava-cli runs --min-distance 12
+z2-cli runs --min-distance 12
 ```
 
 ### Combine filters
 
 ```bash
 # Zone 2 long runs on Sundays from the last 24 weeks
-strava-cli runs --min-distance 12 --day sunday --weeks 24
+z2-cli runs --min-distance 12 --day sunday --weeks 24
 ```
 
 ### Output
@@ -111,7 +111,7 @@ EF is calculated as speed (m/s) divided by average heart rate. A higher EF means
 ## Project Structure
 
 ```
-strava-cli/
+z2-cli/
 ├── main.go                  # Entry point
 ├── cmd/
 │   ├── root.go              # Root cobra command

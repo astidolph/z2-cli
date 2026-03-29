@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/strava-cli/internal/auth"
+	"github.com/z2-cli/internal/auth"
 )
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
 	Short: "Authenticate with Strava",
-	Long: `Connect strava-cli to your Strava account.
+	Long: `Connect z2-cli to your Strava account.
 
 You'll need a Strava API application. Create one at https://www.strava.com/settings/api
 Set the "Authorization Callback Domain" to "localhost".`,

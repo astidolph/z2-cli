@@ -1,6 +1,6 @@
 # Binaries
-strava-cli
-strava-cli.exe
+z2-cli
+z2-cli.exe
 *.exe
 *.exe~
 *.dll

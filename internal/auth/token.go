@@ -23,7 +23,7 @@ func tokenPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not find home directory: %w", err)
 	}
-	dir := filepath.Join(home, ".strava-cli")
+	dir := filepath.Join(home, ".z2-cli")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", fmt.Errorf("could not create config directory: %w", err)
 	}
@@ -53,7 +53,7 @@ func LoadToken() (*Token, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("not authenticated — run 'strava-cli auth' to connect your Strava account")
+			return nil, fmt.Errorf("not authenticated — run 'z2-cli auth' to connect your Strava account")
 		}
 		return nil, fmt.Errorf("could not read token: %w", err)
 	}

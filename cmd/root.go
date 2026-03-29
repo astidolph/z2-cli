@@ -5,9 +5,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "strava-cli",
-	Short: "A CLI tool to track your Strava zone 2 training progress",
-	Long:  "Fetch and visualise your Sunday long run data from Strava — distance, average HR, and time.",
+	Use:   "z2-cli",
+	Short: "Track your zone 2 training progress from Strava",
+	Long:  "Fetch and visualise your zone 2 running data from Strava — distance, heart rate, pace, and efficiency factor.",
 }
 
 func Execute() error {

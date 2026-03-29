@@ -48,7 +48,7 @@ func Authenticate(clientID, clientSecret string) (*Token, error) {
 	authURL := fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&response_type=code&scope=activity:read_all",
 		authorizeURL, clientID, url.QueryEscape(redirectURI))
 
-	fmt.Println("Open this URL in your browser to authorize strava-cli:")
+	fmt.Println("Open this URL in your browser to authorize z2-cli:")
 	fmt.Println()
 	fmt.Println(authURL)
 	fmt.Println()

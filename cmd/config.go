@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/strava-cli/internal/auth"
+	"github.com/z2-cli/internal/auth"
 )
 
 var (
@@ -20,8 +20,8 @@ var configCmd = &cobra.Command{
 You can set it directly or calculate from your age using the Maffetone formula (180 - age).
 
 Examples:
-  strava-cli config --zone2-hr 150
-  strava-cli config --age 30          # sets zone 2 HR to 150 (180 - 30)`,
+  z2-cli config --zone2-hr 150
+  z2-cli config --age 30          # sets zone 2 HR to 150 (180 - 30)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		hrChanged := cmd.Flags().Changed("zone2-hr")
 		ageChanged := cmd.Flags().Changed("age")

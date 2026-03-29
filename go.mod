@@ -1,4 +1,4 @@
-module github.com/strava-cli
+module github.com/z2-cli
 
 go 1.26.1
 

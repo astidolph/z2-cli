@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/strava-cli/cmd"
+	"github.com/z2-cli/cmd"
 )
 
 func main() {
