@@ -43,6 +43,14 @@ This is used to filter runs — only runs with an average HR at or below this va
 
 ## Usage
 
+### View your zone 2 runs sorted by efficiency
+
+```bash
+strava-cli runs --sort ef
+```
+
+This is the most useful command for tracking progress — it shows your zone 2 runs ranked by efficiency factor (EF), so your most aerobically efficient runs are at the top.
+
 ### View your zone 2 runs
 
 ```bash
@@ -73,16 +81,16 @@ strava-cli runs --min-distance 12 --day sunday --weeks 24
 ```
 Zone 2 runs (avg HR ≤ 148 bpm) from the last 12 weeks:
 
-DATE          DISTANCE (km)  TIME         AVG HR    PACE (/km)  EF
-────          ─────────────  ────         ──────    ──────────  ──
-23 Mar 2026   18.50          1h 42m 30s   142 bpm   5:32        0.0211
-16 Mar 2026   12.10          1h 06m 15s   144 bpm   5:27        0.0213
-09 Mar 2026   15.00          1h 22m 00s   140 bpm   5:28        0.0215
+DATE          DISTANCE (km)  TIME         AVG HR    PACE (/km)  PACE (/mi)  EF
+────          ─────────────  ────         ──────    ──────────  ──────────  ──
+23 Mar 2026   18.50          1h 42m 30s   142 bpm   5:32        8:54        0.0211
+16 Mar 2026   12.10          1h 06m 15s   144 bpm   5:27        8:46        0.0213
+09 Mar 2026   15.00          1h 22m 00s   140 bpm   5:28        8:48        0.0215
 
 Summary (last 12 weeks, 3 runs, 45.6 km total):
   Avg EF:   0.0213 ↑ (+2.1% vs prior 12 weeks)
   Avg HR:   142 bpm
-  Avg Pace: 5:29/km
+  Avg Pace: 5:29/km (8:49/mi)
 ```
 
 ### Efficiency Factor (EF)
@@ -96,6 +104,8 @@ EF is calculated as speed (m/s) divided by average heart rate. A higher EF means
 | `--weeks` | `-w` | `12` | Number of weeks to look back |
 | `--day` | `-d` | | Day of week to filter (e.g. sunday, monday) |
 | `--min-distance` | | | Minimum distance in km (e.g. 12 for long runs) |
+| `--sort` | | `date` | Sort by: date, distance, time, hr, pace, ef |
+| `--asc` | | `false` | Sort in ascending order (default is descending) |
 | `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
 
 ## Project Structure
