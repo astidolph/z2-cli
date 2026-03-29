@@ -14,12 +14,17 @@ import (
 var (
 	weeksBack int
 	dayFilter string
+	showAll   bool
 )
 
 var runsCmd = &cobra.Command{
 	Use:   "runs",
 	Short: "Display your running data",
-	Long:  "Fetch and display your runs from Strava, filtered by day of week.",
+	Long: `Fetch and display your runs from Strava.
+
+By default, only shows zone 2 runs (requires max HR to be set via 'strava-cli config --max-hr').
+Use --all to show all runs regardless of heart rate.
+Use --day to filter to a specific day of the week.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token, err := getValidToken()
 		if err != nil {
@@ -34,19 +39,35 @@ var runsCmd = &cobra.Command{
 			return fmt.Errorf("could not fetch runs: %w", err)
 		}
 
-		day, err := parseWeekday(dayFilter)
-		if err != nil {
-			return err
+		if dayFilter != "" {
+			day, err := parseWeekday(dayFilter)
+			if err != nil {
+				return err
+			}
+			runs = strava.FilterByWeekday(runs, day)
 		}
 
-		filtered := strava.FilterByWeekday(runs, day)
+		if !showAll {
+			config, err := auth.LoadConfig()
+			if err != nil {
+				return err
+			}
+			if config.MaxHR == 0 {
+				return fmt.Errorf("max HR not set — run 'strava-cli config --max-hr <value>' or use --all to skip zone 2 filtering")
+			}
+			low, high := config.Zone2Range()
+			runs = strava.FilterByZone2(runs, low, high)
+			fmt.Printf("Zone 2 runs (%.0f-%.0f bpm) from the last %d weeks:\n\n", low, high, weeksBack)
+		} else {
+			fmt.Printf("All runs from the last %d weeks:\n\n", weeksBack)
+		}
 
-		if len(filtered) == 0 {
-			fmt.Printf("No %s runs found in the last %d weeks.\n", dayFilter, weeksBack)
+		if len(runs) == 0 {
+			fmt.Println("No matching runs found.")
 			return nil
 		}
 
-		printRunsTable(filtered)
+		printRunsTable(runs)
 		return nil
 	},
 }
@@ -54,7 +75,8 @@ var runsCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(runsCmd)
 	runsCmd.Flags().IntVarP(&weeksBack, "weeks", "w", 12, "Number of weeks to look back")
-	runsCmd.Flags().StringVarP(&dayFilter, "day", "d", "sunday", "Day of week to filter (e.g. sunday, monday)")
+	runsCmd.Flags().StringVarP(&dayFilter, "day", "d", "", "Day of week to filter (e.g. sunday, monday)")
+	runsCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all runs, skip zone 2 filtering")
 }
 
 func getValidToken() (*auth.Token, error) {
