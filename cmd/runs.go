@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/strava-cli/internal/auth"
+	"github.com/strava-cli/internal/stats"
 	"github.com/strava-cli/internal/strava"
 )
 
@@ -127,8 +128,8 @@ func parseWeekday(s string) (time.Weekday, error) {
 
 func printRunsTable(runs []strava.Activity) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "DATE\tDISTANCE (km)\tTIME\tAVG HR\tPACE (/km)")
-	fmt.Fprintln(w, "────\t─────────────\t────\t──────\t──────────")
+	fmt.Fprintln(w, "DATE\tDISTANCE (km)\tTIME\tAVG HR\tPACE (/km)\tEF")
+	fmt.Fprintln(w, "────\t─────────────\t────\t──────\t──────────\t──")
 
 	for _, r := range runs {
 		t, _ := r.StartTime()
@@ -142,7 +143,13 @@ func printRunsTable(runs []strava.Activity) {
 			hr = fmt.Sprintf("%.0f bpm", r.AverageHeartrate)
 		}
 
-		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\n", date, distKm, duration, hr, pace)
+		ef := stats.EfficiencyFactor(r)
+		efStr := "—"
+		if ef > 0 {
+			efStr = fmt.Sprintf("%.4f", ef)
+		}
+
+		fmt.Fprintf(w, "%s\t%.2f\t%s\t%s\t%s\t%s\n", date, distKm, duration, hr, pace, efStr)
 	}
 	w.Flush()
 }
