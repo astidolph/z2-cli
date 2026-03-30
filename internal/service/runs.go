@@ -6,17 +6,19 @@ import (
 	"time"
 
 	"github.com/z2-cli/internal/auth"
+	"github.com/z2-cli/internal/cache"
 	"github.com/z2-cli/internal/stats"
 	"github.com/z2-cli/internal/strava"
 )
 
 type RunsQuery struct {
-	WeeksBack   int
-	Day         string
-	MinDistance  float64
-	ShowAll     bool
-	SortBy      string
-	Ascending   bool
+	WeeksBack    int
+	Day          string
+	MinDistance   float64
+	ShowAll      bool
+	SortBy       string
+	Ascending    bool
+	ForceRefresh bool
 }
 
 type RunsResult struct {
@@ -29,20 +31,13 @@ type RunsResult struct {
 }
 
 func FetchRuns(query RunsQuery) (*RunsResult, error) {
-	token, err := getValidToken()
-	if err != nil {
-		return nil, err
-	}
-
-	client := strava.NewClient(token.AccessToken)
-
 	now := time.Now()
 	since := now.AddDate(0, 0, -query.WeeksBack*7)
 	priorSince := since.AddDate(0, 0, -query.WeeksBack*7)
 
-	runs, err := client.GetAllRunsSince(priorSince)
+	runs, err := fetchActivities(priorSince, query.ForceRefresh)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch runs: %w", err)
+		return nil, err
 	}
 
 	if query.Day != "" {
@@ -95,6 +90,33 @@ func FetchRuns(query RunsQuery) (*RunsResult, error) {
 		Zone2HR:     zone2HR,
 		WeeksBack:   query.WeeksBack,
 	}, nil
+}
+
+func fetchActivities(since time.Time, forceRefresh bool) ([]strava.Activity, error) {
+	if !forceRefresh {
+		if cached := cache.Load(); cached != nil && cached.IsFresh(since) {
+			return cached.Activities, nil
+		}
+	}
+
+	token, err := getValidToken()
+	if err != nil {
+		return nil, err
+	}
+
+	client := strava.NewClient(token.AccessToken)
+	runs, err := client.GetAllRunsSince(since)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch runs: %w", err)
+	}
+
+	_ = cache.Save(&cache.CachedData{
+		FetchedAt:  time.Now(),
+		SinceUnix:  since.Unix(),
+		Activities: runs,
+	})
+
+	return runs, nil
 }
 
 func getValidToken() (*auth.Token, error) {
