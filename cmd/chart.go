@@ -26,7 +26,7 @@ var chartCmd = &cobra.Command{
 	Long: `Generate interactive HTML charts from your run data and open them in the browser.
 
 Chart types:
-  ef        Efficiency factor over time (default)
+  ef        Efficiency factor + heart rate on dual axes (default)
   pace      Pace per km and per mile over time
   distance  Distance over time in km and miles
   hr        Average heart rate over time
