@@ -1,6 +1,8 @@
 # z2-cli
 
-A command-line tool to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time, and measure aerobic fitness progression — all from the terminal.
+In my experience starting out zone 2 running can be painfully slow paced and a painfully slow progression. I wanted a quick way to visualise progress by pulling together stats I was regularly putting together myself.
+
+This is a command-line tool to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time and measure aerobic fitness progression.
 
 ## Prerequisites
 
