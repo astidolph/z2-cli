@@ -22,12 +22,12 @@ type RunsQuery struct {
 }
 
 type RunsResult struct {
-	CurrentRuns []strava.Activity
-	PriorRuns   []strava.Activity
-	Current     stats.Summary
-	Prior       stats.Summary
-	Zone2HR     int
-	WeeksBack   int
+	CurrentRuns []strava.Activity `json:"current_runs"`
+	PriorRuns   []strava.Activity `json:"prior_runs"`
+	Current     stats.Summary     `json:"current"`
+	Prior       stats.Summary     `json:"prior"`
+	Zone2HR     int               `json:"zone2_hr"`
+	WeeksBack   int               `json:"weeks_back"`
 }
 
 func FetchRuns(query RunsQuery) (*RunsResult, error) {
@@ -99,7 +99,7 @@ func fetchActivities(since time.Time, forceRefresh bool) ([]strava.Activity, err
 		}
 	}
 
-	token, err := getValidToken()
+	token, err := GetValidToken()
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func fetchActivities(since time.Time, forceRefresh bool) ([]strava.Activity, err
 	return runs, nil
 }
 
-func getValidToken() (*auth.Token, error) {
+func GetValidToken() (*auth.Token, error) {
 	config, err := auth.LoadConfig()
 	if err != nil {
 		return nil, err

@@ -3,11 +3,11 @@ package stats
 import "github.com/z2-cli/internal/strava"
 
 type Summary struct {
-	Count    int
-	AvgEF    float64
-	AvgHR    float64
-	AvgPace  float64 // seconds per km
-	TotalKm  float64
+	Count   int     `json:"count"`
+	AvgEF   float64 `json:"avg_ef"`
+	AvgHR   float64 `json:"avg_hr"`
+	AvgPace float64 `json:"avg_pace"` // seconds per km
+	TotalKm float64 `json:"total_km"`
 }
 
 func Summarise(runs []strava.Activity) Summary {
