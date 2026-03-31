@@ -2,11 +2,12 @@
 
 In my experience starting out zone 2 running can be painfully slow paced and a painfully slow progression. I wanted a quick way to visualise progress by pulling together stats I was regularly putting together myself.
 
-This is a command-line tool to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time and measure aerobic fitness progression.
+This is a command-line tool and web dashboard to track your zone 2 training progress by pulling running data from Strava. See your runs filtered by heart rate zone, track efficiency factor (EF) over time and measure aerobic fitness progression.
 
 ## Prerequisites
 
 - [Go 1.21+](https://go.dev/dl/)
+- [Node.js 18+](https://nodejs.org/) (for the web frontend)
 - A Strava account
 - A Strava API application ([create one here](https://www.strava.com/settings/api))
   - Set the **Authorization Callback Domain** to `localhost`
@@ -110,6 +111,49 @@ z2-cli chart --weeks 24 --type all  # last 24 weeks, all charts
 
 Charts support the same filtering flags as the `runs` command (`--weeks`, `--day`, `--min-distance`, `--all`).
 
+### Web Dashboard
+
+The web UI provides the same data as the CLI in a browser-based dashboard you can access from your phone or any device.
+
+#### Development mode
+
+Run the Go API server and SvelteKit dev server separately:
+
+```bash
+# Terminal 1 — API server
+z2-cli serve
+
+# Terminal 2 — frontend dev server (hot reload)
+cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on port 8080.
+
+#### API server only
+
+```bash
+z2-cli serve              # default port 8080
+z2-cli serve --port 3000  # custom port
+```
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Health check |
+| `GET` | `/api/auth/status` | Strava connection status |
+| `GET` | `/api/config` | Get zone 2 HR setting |
+| `PUT` | `/api/config` | Update zone 2 HR (by value or age) |
+| `GET` | `/api/runs` | Runs and stats (supports query params: `weeks`, `day`, `minDistance`, `all`, `sort`, `asc`) |
+| `GET` | `/api/chart-data` | Chart data arrays (same query params as runs) |
+| `POST` | `/api/refresh` | Clear the Strava API cache |
+
+#### Caching
+
+Strava API responses are cached locally in `~/.z2-cli/cache.json` with a 15-minute TTL. This keeps the web dashboard fast and avoids hitting Strava's rate limits (100 requests per 15 minutes, 1000 per day). Use the refresh button in the dashboard or `POST /api/refresh` to clear the cache after a new run.
+
 #### Chart flags
 
 | Flag | Short | Default | Description |
@@ -145,20 +189,42 @@ z2-cli/
 │   ├── auth.go              # Strava OAuth2 authentication
 │   ├── chart.go             # Interactive HTML chart generation
 │   ├── config.go            # Training settings (zone 2 HR)
-│   └── runs.go              # Table display and formatting
-└── internal/
-    ├── auth/
-    │   ├── config.go         # Config persistence (API creds + zone 2 HR)
-    │   ├── oauth.go          # OAuth2 flow and token refresh
-    │   └── token.go          # Token storage
-    ├── chart/
-    │   └── chart.go          # go-echarts chart rendering (EF, pace, distance, HR)
-    ├── service/
-    │   └── runs.go           # Core data logic (fetch, filter, sort, summarise)
-    ├── stats/
-    │   ├── efficiency.go     # Efficiency factor calculation
-    │   └── summary.go        # Period summaries and trend comparison
-    └── strava/
-        ├── client.go         # Strava API HTTP client
-        └── filter.go         # Weekday, HR, and distance filters
+│   ├── runs.go              # Table display and formatting
+│   └── serve.go             # Web API server command
+├── internal/
+│   ├── api/
+│   │   ├── handlers.go      # REST API route handlers
+│   │   ├── middleware.go     # CORS middleware
+│   │   ├── response.go      # JSON response helpers
+│   │   └── server.go        # HTTP server and SPA file serving
+│   ├── auth/
+│   │   ├── config.go        # Config persistence (API creds + zone 2 HR)
+│   │   ├── oauth.go         # OAuth2 flow and token refresh
+│   │   └── token.go         # Token storage
+│   ├── cache/
+│   │   └── cache.go         # File-based Strava API response cache
+│   ├── chart/
+│   │   └── chart.go         # go-echarts chart rendering (EF, pace, distance, HR)
+│   ├── service/
+│   │   └── runs.go          # Core data logic (fetch, filter, sort, summarise)
+│   ├── stats/
+│   │   ├── efficiency.go    # Efficiency factor calculation
+│   │   └── summary.go       # Period summaries and trend comparison
+│   └── strava/
+│       ├── client.go        # Strava API HTTP client
+│       └── filter.go        # Weekday, HR, and distance filters
+└── web/                     # SvelteKit frontend (dark theme dashboard)
+    ├── src/
+    │   ├── lib/
+    │   │   ├── api.ts       # Typed API client
+    │   │   ├── types.ts     # TypeScript interfaces matching Go types
+    │   │   ├── format.ts    # Display formatting helpers
+    │   │   └── components/  # NavBar, SummaryCard, LineChart, RunsTable, FilterBar
+    │   └── routes/
+    │       ├── +page.svelte         # Dashboard (summary + EF chart)
+    │       ├── runs/+page.svelte    # Runs table with filters
+    │       ├── charts/+page.svelte  # All chart types
+    │       └── settings/+page.svelte # Zone 2 HR config
+    ├── svelte.config.js     # adapter-static for single-binary embedding
+    └── vite.config.ts       # Dev proxy to Go API server
 ```
