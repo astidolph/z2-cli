@@ -26,6 +26,11 @@ go.work.sum
 # Claude Code
 .claude/settings.local.json
 
+# Web frontend
+web/node_modules/
+web/build/
+web/.svelte-kit/
+
 # OS
 .DS_Store
 Thumbs.db

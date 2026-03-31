@@ -1,0 +1,66 @@
+import type { RunsResponse, ChartDataResponse, ConfigResponse, AuthStatusResponse } from './types';
+
+const BASE = '/api';
+
+async function get<T>(path: string): Promise<T> {
+	const res = await fetch(`${BASE}${path}`);
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({ error: res.statusText }));
+		throw new Error(body.error || res.statusText);
+	}
+	return res.json();
+}
+
+async function put<T>(path: string, body: unknown): Promise<T> {
+	const res = await fetch(`${BASE}${path}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) {
+		const data = await res.json().catch(() => ({ error: res.statusText }));
+		throw new Error(data.error || res.statusText);
+	}
+	return res.json();
+}
+
+async function post<T>(path: string): Promise<T> {
+	const res = await fetch(`${BASE}${path}`, { method: 'POST' });
+	if (!res.ok) {
+		const data = await res.json().catch(() => ({ error: res.statusText }));
+		throw new Error(data.error || res.statusText);
+	}
+	return res.json();
+}
+
+export interface RunsParams {
+	weeks?: number;
+	day?: string;
+	minDistance?: number;
+	all?: boolean;
+	sort?: string;
+	asc?: boolean;
+	refresh?: boolean;
+}
+
+function buildQuery(params: RunsParams): string {
+	const q = new URLSearchParams();
+	if (params.weeks) q.set('weeks', String(params.weeks));
+	if (params.day) q.set('day', params.day);
+	if (params.minDistance) q.set('minDistance', String(params.minDistance));
+	if (params.all) q.set('all', 'true');
+	if (params.sort) q.set('sort', params.sort);
+	if (params.asc) q.set('asc', 'true');
+	if (params.refresh) q.set('refresh', 'true');
+	const str = q.toString();
+	return str ? `?${str}` : '';
+}
+
+export const api = {
+	getRuns: (params: RunsParams = {}) => get<RunsResponse>(`/runs${buildQuery(params)}`),
+	getChartData: (params: RunsParams = {}) => get<ChartDataResponse>(`/chart-data${buildQuery(params)}`),
+	getConfig: () => get<ConfigResponse>('/config'),
+	putConfig: (body: { zone2_hr?: number; age?: number }) => put<ConfigResponse>('/config', body),
+	getAuthStatus: () => get<AuthStatusResponse>('/auth/status'),
+	refresh: () => post<{ status: string }>('/refresh')
+};

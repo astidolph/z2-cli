@@ -1,0 +1,70 @@
+:root {
+	--bg-primary: #0f0b24;
+	--bg-card: #1a1440;
+	--bg-input: #241d52;
+	--text-primary: #e8e4f0;
+	--text-secondary: #9b93b4;
+	--text-muted: #6b6288;
+	--accent: #7c6ef0;
+	--accent-hover: #9589f5;
+	--positive: #4ade80;
+	--negative: #f87171;
+	--border: #2d2560;
+	--radius: 8px;
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+	background: var(--bg-primary);
+	color: var(--text-primary);
+	line-height: 1.5;
+}
+
+a {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+a:hover {
+	color: var(--accent-hover);
+}
+
+.card {
+	background: var(--bg-card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-input);
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.btn:hover {
+	background: var(--accent);
+}
+
+.btn-primary {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+
+.btn-primary:hover {
+	background: var(--accent-hover);
+}
