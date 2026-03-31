@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Chart, registerables } from 'chart.js';
 
 	Chart.register(...registerables);
@@ -28,7 +27,14 @@
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | undefined;
 
-	function buildChart() {
+	$effect(() => {
+		if (!canvas) return;
+
+		// Clone data out of Svelte's reactive proxies — Chart.js uses
+		// Object.defineProperty internally which conflicts with $state proxies.
+		const currentLabels = [...labels];
+		const currentDatasets = datasets.map((ds) => ({ ...ds, data: [...ds.data] }));
+
 		if (chart) chart.destroy();
 
 		const textColor = '#9b93b4';
@@ -37,8 +43,8 @@
 		chart = new Chart(canvas, {
 			type: 'line',
 			data: {
-				labels,
-				datasets: datasets.map((ds) => ({
+				labels: currentLabels,
+				datasets: currentDatasets.map((ds) => ({
 					label: ds.label,
 					data: ds.data,
 					borderColor: ds.color,
@@ -95,18 +101,11 @@
 				}
 			}
 		});
-	}
 
-	onMount(() => {
-		buildChart();
-		return () => chart?.destroy();
-	});
-
-	$effect(() => {
-		// Re-render when data changes
-		if (canvas && labels && datasets) {
-			buildChart();
-		}
+		return () => {
+			chart?.destroy();
+			chart = undefined;
+		};
 	});
 </script>
 
