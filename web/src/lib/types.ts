@@ -32,12 +32,12 @@ export interface RunsResponse {
 
 export interface ChartDataResponse {
 	dates: string[] | null;
-	ef: number[] | null;
-	pace: number[] | null;
-	pace_mi: number[] | null;
-	distance: number[] | null;
-	distance_mi: number[] | null;
-	hr: number[] | null;
+	ef: (number | null)[] | null;
+	pace: (number | null)[] | null;
+	pace_mi: (number | null)[] | null;
+	distance: (number | null)[] | null;
+	distance_mi: (number | null)[] | null;
+	hr: (number | null)[] | null;
 }
 
 export interface ConfigResponse {

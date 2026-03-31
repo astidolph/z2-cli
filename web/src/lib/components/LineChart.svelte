@@ -5,7 +5,7 @@
 
 	interface Dataset {
 		label: string;
-		data: number[];
+		data: (number | null)[];
 		color: string;
 		yAxisID?: string;
 	}
@@ -35,8 +35,6 @@
 		const currentLabels = [...labels];
 		const currentDatasets = datasets.map((ds) => ({ ...ds, data: [...ds.data] }));
 
-		if (chart) chart.destroy();
-
 		const textColor = '#9b93b4';
 		const gridColor = '#2d2560';
 
@@ -54,6 +52,7 @@
 					pointHoverRadius: 5,
 					tension: 0.3,
 					fill: false,
+					spanGaps: true,
 					yAxisID: ds.yAxisID || 'y'
 				}))
 			},

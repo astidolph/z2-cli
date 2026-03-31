@@ -20,10 +20,6 @@
 		}
 	}
 
-	function changeWeeks() {
-		load();
-	}
-
 	$effect(() => {
 		load();
 	});
@@ -35,7 +31,7 @@
 		<div class="controls">
 			<label>
 				<span>Weeks</span>
-				<input type="number" bind:value={weeks} min="1" max="104" onchange={changeWeeks} />
+				<input type="number" bind:value={weeks} min="1" max="104" />
 			</label>
 		</div>
 	</div>

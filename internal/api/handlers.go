@@ -115,13 +115,13 @@ func handleGetRuns(w http.ResponseWriter, r *http.Request) {
 }
 
 type chartDataResponse struct {
-	Dates      []string  `json:"dates"`
-	EF         []float64 `json:"ef"`
-	Pace       []float64 `json:"pace"`
-	PaceMi     []float64 `json:"pace_mi"`
-	Distance   []float64 `json:"distance"`
-	DistanceMi []float64 `json:"distance_mi"`
-	HR         []float64 `json:"hr"`
+	Dates      []string   `json:"dates"`
+	EF         []*float64 `json:"ef"`
+	Pace       []*float64 `json:"pace"`
+	PaceMi     []*float64 `json:"pace_mi"`
+	Distance   []*float64 `json:"distance"`
+	DistanceMi []*float64 `json:"distance_mi"`
+	HR         []*float64 `json:"hr"`
 }
 
 func handleGetChartData(w http.ResponseWriter, r *http.Request) {
@@ -200,18 +200,30 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 	return query, nil
 }
 
-// lineDataToFloats converts go-echarts LineData values to plain float64s.
-func lineDataToFloats(data []opts.LineData) []float64 {
-	out := make([]float64, len(data))
+// lineDataToFloats converts go-echarts LineData values to plain float64 pointers.
+// nil Values are preserved as nil so they serialize to JSON null (Chart.js skips nulls).
+func lineDataToFloats(data []opts.LineData) []*float64 {
+	out := make([]*float64, len(data))
 	for i, d := range data {
+		if d.Value == nil {
+			continue
+		}
+		var f float64
 		switch v := d.Value.(type) {
 		case string:
-			out[i], _ = strconv.ParseFloat(v, 64)
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				continue
+			}
+			f = parsed
 		case float64:
-			out[i] = v
+			f = v
 		case int:
-			out[i] = float64(v)
+			f = float64(v)
+		default:
+			continue
 		}
+		out[i] = &f
 	}
 	return out
 }

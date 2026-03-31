@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"strconv"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -47,8 +48,8 @@ func BuildChartData(runs []strava.Activity) ChartData {
 			data.Pace = append(data.Pace, opts.LineData{Value: fmt.Sprintf("%.2f", paceKm)})
 			data.PaceMi = append(data.PaceMi, opts.LineData{Value: fmt.Sprintf("%.2f", paceMi)})
 		} else {
-			data.Pace = append(data.Pace, opts.LineData{Value: 0})
-			data.PaceMi = append(data.PaceMi, opts.LineData{Value: 0})
+			data.Pace = append(data.Pace, opts.LineData{Value: nil})
+			data.PaceMi = append(data.PaceMi, opts.LineData{Value: nil})
 		}
 
 		distKm := r.Distance / 1000.0
@@ -59,7 +60,7 @@ func BuildChartData(runs []strava.Activity) ChartData {
 		if r.HasHeartrate {
 			data.HR = append(data.HR, opts.LineData{Value: fmt.Sprintf("%.0f", r.AverageHeartrate)})
 		} else {
-			data.HR = append(data.HR, opts.LineData{Value: 0})
+			data.HR = append(data.HR, opts.LineData{Value: nil})
 		}
 	}
 	return data
@@ -188,15 +189,11 @@ func newLine(title, yAxisName string) *charts.Line {
 }
 
 func sortByDateAsc(runs []strava.Activity) {
-	for i := 0; i < len(runs)-1; i++ {
-		for j := i + 1; j < len(runs); j++ {
-			ti, _ := runs[i].StartTime()
-			tj, _ := runs[j].StartTime()
-			if ti.After(tj) {
-				runs[i], runs[j] = runs[j], runs[i]
-			}
-		}
-	}
+	sort.Slice(runs, func(i, j int) bool {
+		ti, _ := runs[i].StartTime()
+		tj, _ := runs[j].StartTime()
+		return ti.Before(tj)
+	})
 }
 
 // RenderAll generates a single HTML page with all charts.
