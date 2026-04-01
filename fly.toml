@@ -1,0 +1,15 @@
+app = 'z2-cli'
+primary_region = 'lhr'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[mounts]
+  source = 'z2_data'
+  destination = '/root/.z2-cli'

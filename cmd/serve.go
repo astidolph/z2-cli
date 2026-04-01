@@ -15,7 +15,7 @@ var serveCmd = &cobra.Command{
 		port, _ := cmd.Flags().GetInt("port")
 		addr := fmt.Sprintf(":%d", port)
 
-		server := api.NewServer(addr, nil)
+		server := api.NewServer(addr, FrontendFS)
 		return server.Start()
 	},
 }
