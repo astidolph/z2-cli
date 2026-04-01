@@ -12,4 +12,4 @@ primary_region = 'lhr'
 
 [mounts]
   source = 'z2_data'
-  destination = '/root/.z2-cli'
+  destination = '/home/z2user/.z2-cli'

@@ -18,6 +18,8 @@ RUN CGO_ENABLED=0 go build -tags production -o z2-cli .
 # Stage 3: Runtime
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates
+RUN adduser -D -h /home/z2user z2user
 COPY --from=backend /app/z2-cli /usr/local/bin/z2-cli
+USER z2user
 EXPOSE 8080
 CMD ["z2-cli", "serve"]
