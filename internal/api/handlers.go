@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -97,7 +98,8 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := auth.ExchangeCode(config.ClientID, config.ClientSecret, code)
 	if err != nil {
-		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Token exchange failed: "+err.Error()), http.StatusTemporaryRedirect)
+		log.Printf("Token exchange failed: %v", err)
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Token exchange failed — please try again"), http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -133,7 +135,8 @@ func handleAuthStatus(w http.ResponseWriter, r *http.Request) {
 func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	config, err := auth.LoadConfig()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to load config: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not load config")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -153,7 +156,8 @@ func handlePutConfig(w http.ResponseWriter, r *http.Request) {
 
 	config, err := auth.LoadConfig()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to load config: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not load config")
 		return
 	}
 
@@ -176,7 +180,8 @@ func handlePutConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := auth.SaveConfig(config); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to save config: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not save config")
 		return
 	}
 
@@ -194,7 +199,8 @@ func handleGetRuns(w http.ResponseWriter, r *http.Request) {
 
 	result, err := service.FetchRuns(query)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to fetch runs: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not fetch runs")
 		return
 	}
 
@@ -229,7 +235,8 @@ func handleGetChartData(w http.ResponseWriter, r *http.Request) {
 
 	result, err := service.FetchRuns(query)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to fetch chart data: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not fetch chart data")
 		return
 	}
 
@@ -249,7 +256,8 @@ func handleGetChartData(w http.ResponseWriter, r *http.Request) {
 
 func handleRefresh(w http.ResponseWriter, r *http.Request) {
 	if err := cache.Invalidate(); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to invalidate cache: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not clear cache")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "cache cleared"})
