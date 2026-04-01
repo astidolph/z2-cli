@@ -106,6 +106,7 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setSessionCookie(w, r)
 	http.Redirect(w, r, "/settings?auth_success=true", http.StatusTemporaryRedirect)
 }
 

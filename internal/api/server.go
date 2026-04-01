@@ -18,16 +18,20 @@ func NewServer(addr string, frontendFS fs.FS) *Server {
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	// API routes
+	// Public routes (no auth required)
 	mux.HandleFunc("GET /api/health", handleHealth)
 	mux.HandleFunc("GET /api/auth/status", handleAuthStatus)
 	mux.HandleFunc("GET /api/auth/login", handleAuthLogin)
 	mux.HandleFunc("GET /api/auth/callback", handleAuthCallback)
-	mux.HandleFunc("GET /api/config", handleGetConfig)
-	mux.HandleFunc("PUT /api/config", handlePutConfig)
-	mux.HandleFunc("GET /api/runs", handleGetRuns)
-	mux.HandleFunc("GET /api/chart-data", handleGetChartData)
-	mux.HandleFunc("POST /api/refresh", handleRefresh)
+
+	// Protected routes (session required)
+	protected := http.NewServeMux()
+	protected.HandleFunc("GET /api/config", handleGetConfig)
+	protected.HandleFunc("PUT /api/config", handlePutConfig)
+	protected.HandleFunc("GET /api/runs", handleGetRuns)
+	protected.HandleFunc("GET /api/chart-data", handleGetChartData)
+	protected.HandleFunc("POST /api/refresh", handleRefresh)
+	mux.Handle("/api/", requireAuth(protected))
 
 	// Serve embedded frontend if available
 	if s.frontendFS != nil {

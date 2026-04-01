@@ -2,9 +2,16 @@ import type { RunsResponse, ChartDataResponse, ConfigResponse, AuthStatusRespons
 
 const BASE = '/api';
 
+function handleUnauthorized(res: Response) {
+	if (res.status === 401) {
+		window.location.href = '/settings';
+	}
+}
+
 async function get<T>(path: string): Promise<T> {
 	const res = await fetch(`${BASE}${path}`);
 	if (!res.ok) {
+		handleUnauthorized(res);
 		const body = await res.json().catch(() => ({ error: res.statusText }));
 		throw new Error(body.error || res.statusText);
 	}
@@ -18,6 +25,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
 		body: JSON.stringify(body)
 	});
 	if (!res.ok) {
+		handleUnauthorized(res);
 		const data = await res.json().catch(() => ({ error: res.statusText }));
 		throw new Error(data.error || res.statusText);
 	}
@@ -27,6 +35,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
 async function post<T>(path: string): Promise<T> {
 	const res = await fetch(`${BASE}${path}`, { method: 'POST' });
 	if (!res.ok) {
+		handleUnauthorized(res);
 		const data = await res.json().catch(() => ({ error: res.statusText }));
 		throw new Error(data.error || res.statusText);
 	}
