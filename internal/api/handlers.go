@@ -145,6 +145,7 @@ func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePutConfig(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
 	var body struct {
 		Zone2HR *int `json:"zone2_hr"`
 		Age     *int `json:"age"`
