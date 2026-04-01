@@ -24,7 +24,7 @@ go.work.sum
 *.swo
 
 # Claude Code
-.claude/settings.local.json
+.claude
 
 # Web frontend
 web/node_modules/
