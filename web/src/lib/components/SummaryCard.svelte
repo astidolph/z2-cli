@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Summary } from '$lib/types';
-	import { formatDistanceKm, formatPace, formatEF, formatHR } from '$lib/format';
+	import { formatTotalDistance, formatPace, formatEF, formatHR } from '$lib/format';
 
 	let { summary, label, trend }: { summary: Summary; label: string; trend?: number } = $props();
 </script>
@@ -13,7 +13,7 @@
 			<span class="stat-label">Runs</span>
 		</div>
 		<div class="stat">
-			<span class="stat-value">{formatDistanceKm(summary.total_km)}</span>
+			<span class="stat-value">{formatTotalDistance(summary.total_km)}</span>
 			<span class="stat-label">Total Distance</span>
 		</div>
 		<div class="stat">

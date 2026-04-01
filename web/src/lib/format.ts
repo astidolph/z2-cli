@@ -1,22 +1,16 @@
 const KM_TO_MILE = 1.60934;
 
 export function formatDistance(meters: number): string {
-	const km = meters / 1000;
-	return `${km.toFixed(2)} km`;
+	const mi = meters / 1000 / KM_TO_MILE;
+	return `${mi.toFixed(2)} mi`;
 }
 
-export function formatDistanceKm(km: number): string {
-	return `${km.toFixed(1)} km`;
+export function formatTotalDistance(km: number): string {
+	const mi = km / KM_TO_MILE;
+	return `${mi.toFixed(1)} mi`;
 }
 
 export function formatPace(secondsPerKm: number): string {
-	if (secondsPerKm <= 0) return '-';
-	const mins = Math.floor(secondsPerKm / 60);
-	const secs = Math.round(secondsPerKm % 60);
-	return `${mins}:${secs.toString().padStart(2, '0')} /km`;
-}
-
-export function formatPaceMi(secondsPerKm: number): string {
 	if (secondsPerKm <= 0) return '-';
 	const secondsPerMi = secondsPerKm * KM_TO_MILE;
 	const mins = Math.floor(secondsPerMi / 60);
