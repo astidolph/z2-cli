@@ -37,7 +37,7 @@ func BuildChartData(runs []strava.Activity) ChartData {
 		if err != nil {
 			continue
 		}
-		data.Dates = append(data.Dates, t.Format("02 Jan"))
+		data.Dates = append(data.Dates, t.Format("02 Jan 06"))
 
 		ef := stats.EfficiencyFactor(r)
 		data.EF = append(data.EF, opts.LineData{Value: fmt.Sprintf("%.4f", ef)})
