@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/z2-cli/internal/auth"
@@ -13,6 +15,99 @@ import (
 	"github.com/z2-cli/internal/service"
 	"github.com/z2-cli/internal/stats"
 )
+
+func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
+	config, err := auth.LoadConfig()
+	if err != nil {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Strava credentials not configured"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	// Build redirect URI from the incoming request
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		scheme = "http"
+	}
+	redirectURI := scheme + "://" + r.Host + "/api/auth/callback"
+
+	// Generate state and sign it with client secret for CSRF protection
+	state := auth.GenerateState()
+	sig := auth.SignState(state, config.ClientSecret)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "z2_oauth_state",
+		Value:    state + "." + sig,
+		Path:     "/api/auth/callback",
+		MaxAge:   300,
+		HttpOnly: true,
+		Secure:   scheme == "https",
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	authURL := auth.BuildAuthorizeURL(config.ClientID, redirectURI, state)
+	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+}
+
+func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
+	// Check if Strava returned an error
+	if stravaErr := r.URL.Query().Get("error"); stravaErr != "" {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Strava authorization denied"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	code := r.URL.Query().Get("code")
+	state := r.URL.Query().Get("state")
+	if code == "" || state == "" {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Missing authorization code or state"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	// Validate state from cookie
+	cookie, err := r.Cookie("z2_oauth_state")
+	if err != nil {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Missing state cookie — please try again"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	parts := strings.SplitN(cookie.Value, ".", 2)
+	if len(parts) != 2 || parts[0] != state {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Invalid state — please try again"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	config, err := auth.LoadConfig()
+	if err != nil {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Could not load config"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	if !auth.ValidateSignedState(parts[0], parts[1], config.ClientSecret) {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Invalid state signature — please try again"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	// Clear the state cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "z2_oauth_state",
+		Value:    "",
+		Path:     "/api/auth/callback",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
+
+	token, err := auth.ExchangeCode(config.ClientID, config.ClientSecret, code)
+	if err != nil {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Token exchange failed: "+err.Error()), http.StatusTemporaryRedirect)
+		return
+	}
+
+	if err := auth.SaveToken(token); err != nil {
+		http.Redirect(w, r, "/settings?auth_error="+url.QueryEscape("Could not save token"), http.StatusTemporaryRedirect)
+		return
+	}
+
+	http.Redirect(w, r, "/settings?auth_success=true", http.StatusTemporaryRedirect)
+}
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

@@ -10,8 +10,25 @@
 	let message: string | null = $state(null);
 	let error: string | null = $state(null);
 
+	// Check for OAuth callback results in URL params
+	function checkAuthResult() {
+		const params = new URLSearchParams(window.location.search);
+		const authError = params.get('auth_error');
+		const authSuccess = params.get('auth_success');
+		if (authError) {
+			error = authError;
+		} else if (authSuccess) {
+			message = 'Successfully connected to Strava!';
+		}
+		// Clean up URL params
+		if (authError || authSuccess) {
+			window.history.replaceState({}, '', window.location.pathname);
+		}
+	}
+
 	async function load() {
 		loading = true;
+		checkAuthResult();
 		try {
 			const [config, auth] = await Promise.all([api.getConfig(), api.getAuthStatus()]);
 			zone2HR = config.zone2_hr;
@@ -72,8 +89,9 @@
 			<h2>Strava Connection</h2>
 			{#if authStatus?.authenticated}
 				<p class="auth-ok">Connected</p>
+				<a href="/api/auth/login" class="btn btn-secondary btn-small">Reconnect</a>
 			{:else}
-				<p class="auth-warn">Not connected — run <code>z2-cli auth</code> in your terminal to connect Strava.</p>
+				<a href="/api/auth/login" class="btn btn-primary">Connect Strava</a>
 			{/if}
 		</div>
 
@@ -141,9 +159,20 @@
 		font-weight: 600;
 	}
 
-	.auth-warn {
-		color: var(--negative);
-		font-size: 0.875rem;
+	.btn-secondary {
+		background: var(--bg-input);
+		border: 1px solid var(--border);
+		color: var(--text-secondary);
+	}
+
+	.btn-secondary:hover {
+		color: var(--text-primary);
+		border-color: var(--text-secondary);
+	}
+
+	.btn-small {
+		padding: 0.25rem 0.75rem;
+		font-size: 0.75rem;
 	}
 
 	code {

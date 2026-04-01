@@ -2,6 +2,10 @@ package auth
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -67,14 +71,41 @@ func Authenticate(clientID, clientSecret string) (*Token, error) {
 
 	server.Shutdown(context.Background())
 
-	token, err := exchangeCode(clientID, clientSecret, code)
+	token, err := ExchangeCode(clientID, clientSecret, code)
 	if err != nil {
 		return nil, err
 	}
 	return token, nil
 }
 
-func exchangeCode(clientID, clientSecret, code string) (*Token, error) {
+// BuildAuthorizeURL constructs the Strava OAuth URL with a dynamic redirect URI.
+func BuildAuthorizeURL(clientID, redirectURI, state string) string {
+	return fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&response_type=code&scope=activity:read_all&state=%s",
+		authorizeURL, clientID, url.QueryEscape(redirectURI), url.QueryEscape(state))
+}
+
+// GenerateState creates a random state string for CSRF protection.
+func GenerateState() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// SignState signs a state value using HMAC-SHA256 with the given key.
+func SignState(state, key string) string {
+	mac := hmac.New(sha256.New, []byte(key))
+	mac.Write([]byte(state))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// ValidateSignedState checks that the signature matches the state.
+func ValidateSignedState(state, signature, key string) bool {
+	expected := SignState(state, key)
+	return hmac.Equal([]byte(expected), []byte(signature))
+}
+
+// ExchangeCode exchanges an authorization code for an access token.
+func ExchangeCode(clientID, clientSecret, code string) (*Token, error) {
 	data := url.Values{
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},

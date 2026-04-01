@@ -21,6 +21,8 @@ func (s *Server) Start() error {
 	// API routes
 	mux.HandleFunc("GET /api/health", handleHealth)
 	mux.HandleFunc("GET /api/auth/status", handleAuthStatus)
+	mux.HandleFunc("GET /api/auth/login", handleAuthLogin)
+	mux.HandleFunc("GET /api/auth/callback", handleAuthCallback)
 	mux.HandleFunc("GET /api/config", handleGetConfig)
 	mux.HandleFunc("PUT /api/config", handlePutConfig)
 	mux.HandleFunc("GET /api/runs", handleGetRuns)
