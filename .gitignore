@@ -31,6 +31,10 @@ web/node_modules/
 web/build/
 web/.svelte-kit/
 
+# Secrets
+.env
+.env.*
+
 # OS
 .DS_Store
 Thumbs.db
