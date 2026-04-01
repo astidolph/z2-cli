@@ -6,9 +6,9 @@
 	let chartData: ChartDataResponse | null = $state(null);
 	let error: string | null = $state(null);
 	let loading = $state(true);
-	let weeks = $state(12);
+	let weeksInput = $state(12);
 
-	async function load() {
+	async function load(weeks: number) {
 		loading = true;
 		error = null;
 		try {
@@ -20,9 +20,11 @@
 		}
 	}
 
-	$effect(() => {
-		load();
-	});
+	function apply() {
+		load(weeksInput);
+	}
+
+	load(12);
 </script>
 
 <div class="charts-page">
@@ -31,8 +33,9 @@
 		<div class="controls">
 			<label>
 				<span>Weeks</span>
-				<input type="number" bind:value={weeks} min="1" max="104" />
+				<input type="number" bind:value={weeksInput} min="1" max="104" />
 			</label>
+			<button onclick={apply}>Apply</button>
 		</div>
 	</div>
 
@@ -105,6 +108,12 @@
 		font-size: 1.5rem;
 	}
 
+	.controls {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.controls label {
 		display: flex;
 		align-items: center;
@@ -121,6 +130,20 @@
 		color: var(--text-primary);
 		font-size: 0.875rem;
 		width: 80px;
+	}
+
+	.controls button {
+		padding: 0.375rem 0.75rem;
+		background: var(--accent, #7c6ef0);
+		border: none;
+		border-radius: var(--radius);
+		color: #fff;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.controls button:hover {
+		opacity: 0.85;
 	}
 
 	.card {
