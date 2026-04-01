@@ -293,7 +293,12 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 		query.ShowAll = true
 	}
 	if v := q.Get("sort"); v != "" {
-		query.SortBy = v
+		switch v {
+		case "date", "distance", "time", "hr", "pace", "ef":
+			query.SortBy = v
+		default:
+			return query, fmt.Errorf("invalid sort parameter")
+		}
 	}
 	if v := q.Get("asc"); v == "true" {
 		query.Ascending = true
