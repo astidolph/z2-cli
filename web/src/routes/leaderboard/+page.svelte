@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { api } from '$lib/api';
+	import { api, type LeaderboardParams } from '$lib/api';
 	import type { LeaderboardResponse } from '$lib/types';
 	import { formatDate, formatDistance, formatDuration, formatHR, formatPace, efficiencyFactor, formatEF } from '$lib/format';
+
+	const KM_TO_MILE = 1.60934;
+	const currentYear = new Date().getFullYear();
 
 	let data: LeaderboardResponse | null = $state(null);
 	let error: string | null = $state(null);
@@ -9,11 +12,26 @@
 	let refreshing = $state(false);
 	let page = $state(1);
 
+	// Filter state
+	let year = $state(0);
+	let minMiles = $state(3);
+	let maxMiles = $state(0);
+	let maxHR = $state(0);
+
+	function buildParams(): LeaderboardParams {
+		const params: LeaderboardParams = { page };
+		if (year > 0) params.year = year;
+		if (minMiles > 0) params.minDistance = minMiles * KM_TO_MILE * 1000;
+		if (maxMiles > 0) params.maxDistance = maxMiles * KM_TO_MILE * 1000;
+		if (maxHR > 0) params.maxHR = maxHR;
+		return params;
+	}
+
 	async function load() {
 		loading = true;
 		error = null;
 		try {
-			data = await api.getLeaderboard(page);
+			data = await api.getLeaderboard(buildParams());
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load leaderboard';
 		} finally {
@@ -35,6 +53,11 @@
 		}
 	}
 
+	function applyFilters() {
+		page = 1;
+		load();
+	}
+
 	function goToPage(p: number) {
 		page = p;
 		load();
@@ -52,6 +75,12 @@
 		if (!data) return 0;
 		return (data.page - 1) * data.page_size;
 	});
+
+	// Generate year options from 2008 (Strava launch) to current year.
+	const yearOptions: number[] = [];
+	for (let y = currentYear; y >= 2008; y--) {
+		yearOptions.push(y);
+	}
 </script>
 
 <div class="leaderboard-page">
@@ -60,6 +89,32 @@
 		<button class="refresh-btn" onclick={refresh} disabled={refreshing}>
 			{refreshing ? 'Syncing...' : 'Sync from Strava'}
 		</button>
+	</div>
+
+	<div class="filters card">
+		<div class="filter-row">
+			<label>
+				Year
+				<select bind:value={year} onchange={applyFilters}>
+					<option value={0}>All years</option>
+					{#each yearOptions as y}
+						<option value={y}>{y}</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				Min distance (mi)
+				<input type="number" bind:value={minMiles} onchange={applyFilters} min="0" step="0.5" />
+			</label>
+			<label>
+				Max distance (mi)
+				<input type="number" bind:value={maxMiles} onchange={applyFilters} min="0" step="0.5" placeholder="No limit" />
+			</label>
+			<label>
+				Max avg HR
+				<input type="number" bind:value={maxHR} onchange={applyFilters} min="0" step="1" placeholder="No limit" />
+			</label>
+		</div>
 	</div>
 
 	{#if refreshing}
@@ -152,6 +207,38 @@
 	.refresh-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	.filters {
+		padding: 1rem 1.25rem;
+	}
+
+	.filter-row {
+		display: flex;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+		align-items: end;
+	}
+
+	.filter-row label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.filter-row select,
+	.filter-row input {
+		padding: 0.375rem 0.5rem;
+		background: var(--bg-input);
+		color: var(--text-primary);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		font-size: 0.875rem;
+		min-width: 7rem;
 	}
 
 	.total {

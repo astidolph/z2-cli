@@ -11,6 +11,17 @@ import (
 
 const LeaderboardPageSize = 30
 
+// Default minimum distance: 3 miles in meters.
+const defaultMinDistanceMeters = 4828.03
+
+type LeaderboardQuery struct {
+	Page        int
+	Year        int     // 0 means all years
+	MinDistance  float64 // meters, 0 means use default (3 miles)
+	MaxDistance  float64 // meters, 0 means no upper limit
+	MaxHR       float64 // 0 means no limit
+}
+
 type LeaderboardResult struct {
 	Runs       []strava.Activity `json:"runs"`
 	TotalCount int               `json:"total_count"`
@@ -20,24 +31,42 @@ type LeaderboardResult struct {
 
 // FetchLeaderboard returns a page of runs sorted by EF descending.
 // Only runs with heart rate data (EF > 0) are included.
-func FetchLeaderboard(page int) (*LeaderboardResult, error) {
+func FetchLeaderboard(query LeaderboardQuery) (*LeaderboardResult, error) {
 	history := cache.LoadHistory()
 	if history == nil || len(history.Activities) == 0 {
 		return &LeaderboardResult{
 			Runs:       []strava.Activity{},
 			TotalCount: 0,
-			Page:       page,
+			Page:       query.Page,
 			PageSize:   LeaderboardPageSize,
 		}, nil
 	}
 
-	// Filter to runs with HR data, minimum 3 miles, and sort by EF descending.
-	const minDistanceMeters = 4828.03 // 3 miles
+	minDist := query.MinDistance
+	if minDist == 0 {
+		minDist = defaultMinDistanceMeters
+	}
+
 	var eligible []strava.Activity
 	for _, a := range history.Activities {
-		if a.HasHeartrate && a.Distance >= minDistanceMeters && stats.EfficiencyFactor(a) > 0 {
-			eligible = append(eligible, a)
+		if !a.HasHeartrate || stats.EfficiencyFactor(a) <= 0 {
+			continue
 		}
+		if a.Distance < minDist {
+			continue
+		}
+		if query.MaxDistance > 0 && a.Distance > query.MaxDistance {
+			continue
+		}
+		if query.MaxHR > 0 && a.AverageHeartrate > query.MaxHR {
+			continue
+		}
+		if query.Year > 0 {
+			if t, err := a.StartTime(); err == nil && t.Year() != query.Year {
+				continue
+			}
+		}
+		eligible = append(eligible, a)
 	}
 
 	if err := SortRuns(eligible, "ef", false); err != nil {
@@ -47,12 +76,12 @@ func FetchLeaderboard(page int) (*LeaderboardResult, error) {
 	total := len(eligible)
 
 	// Paginate.
-	start := (page - 1) * LeaderboardPageSize
+	start := (query.Page - 1) * LeaderboardPageSize
 	if start >= total {
 		return &LeaderboardResult{
 			Runs:       []strava.Activity{},
 			TotalCount: total,
-			Page:       page,
+			Page:       query.Page,
 			PageSize:   LeaderboardPageSize,
 		}, nil
 	}
@@ -64,7 +93,7 @@ func FetchLeaderboard(page int) (*LeaderboardResult, error) {
 	return &LeaderboardResult{
 		Runs:       eligible[start:end],
 		TotalCount: total,
-		Page:       page,
+		Page:       query.Page,
 		PageSize:   LeaderboardPageSize,
 	}, nil
 }

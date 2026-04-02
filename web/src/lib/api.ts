@@ -65,6 +65,25 @@ function buildQuery(params: RunsParams): string {
 	return str ? `?${str}` : '';
 }
 
+export interface LeaderboardParams {
+	page?: number;
+	year?: number;
+	minDistance?: number;
+	maxDistance?: number;
+	maxHR?: number;
+}
+
+function buildLeaderboardQuery(params: LeaderboardParams): string {
+	const q = new URLSearchParams();
+	if (params.page) q.set('page', String(params.page));
+	if (params.year) q.set('year', String(params.year));
+	if (params.minDistance) q.set('minDistance', String(params.minDistance));
+	if (params.maxDistance) q.set('maxDistance', String(params.maxDistance));
+	if (params.maxHR) q.set('maxHR', String(params.maxHR));
+	const str = q.toString();
+	return str ? `?${str}` : '';
+}
+
 export const api = {
 	getRuns: (params: RunsParams = {}) => get<RunsResponse>(`/runs${buildQuery(params)}`),
 	getChartData: (params: RunsParams = {}) => get<ChartDataResponse>(`/chart-data${buildQuery(params)}`),
@@ -72,6 +91,6 @@ export const api = {
 	putConfig: (body: { zone2_hr?: number; age?: number }) => put<ConfigResponse>('/config', body),
 	getAuthStatus: () => get<AuthStatusResponse>('/auth/status'),
 	refresh: () => post<{ status: string }>('/refresh'),
-	getLeaderboard: (page: number = 1) => get<LeaderboardResponse>(`/leaderboard?page=${page}`),
+	getLeaderboard: (params: LeaderboardParams = {}) => get<LeaderboardResponse>(`/leaderboard${buildLeaderboardQuery(params)}`),
 	refreshLeaderboard: () => post<{ status: string }>('/leaderboard/refresh')
 };

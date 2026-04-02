@@ -370,17 +370,13 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 }
 
 func handleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	if v := r.URL.Query().Get("page"); v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n <= 0 {
-			writeError(w, http.StatusBadRequest, "invalid page parameter")
-			return
-		}
-		page = n
+	query, err := parseLeaderboardQuery(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	result, err := service.FetchLeaderboard(page)
+	result, err := service.FetchLeaderboard(query)
 	if err != nil {
 		log.Printf("Failed to fetch leaderboard: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not fetch leaderboard")
@@ -388,6 +384,49 @@ func handleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+func parseLeaderboardQuery(r *http.Request) (service.LeaderboardQuery, error) {
+	q := r.URL.Query()
+	query := service.LeaderboardQuery{Page: 1}
+
+	if v := q.Get("page"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return query, fmt.Errorf("invalid page parameter")
+		}
+		query.Page = n
+	}
+	if v := q.Get("year"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 2000 {
+			return query, fmt.Errorf("invalid year parameter")
+		}
+		query.Year = n
+	}
+	if v := q.Get("minDistance"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 {
+			return query, fmt.Errorf("invalid minDistance parameter")
+		}
+		query.MinDistance = f
+	}
+	if v := q.Get("maxDistance"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 {
+			return query, fmt.Errorf("invalid maxDistance parameter")
+		}
+		query.MaxDistance = f
+	}
+	if v := q.Get("maxHR"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f <= 0 {
+			return query, fmt.Errorf("invalid maxHR parameter")
+		}
+		query.MaxHR = f
+	}
+
+	return query, nil
 }
 
 func handleRefreshLeaderboard(w http.ResponseWriter, r *http.Request) {
