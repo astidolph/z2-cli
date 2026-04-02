@@ -31,6 +31,8 @@ func (s *Server) Start() error {
 	protected.HandleFunc("GET /api/runs", handleGetRuns)
 	protected.HandleFunc("GET /api/chart-data", handleGetChartData)
 	protected.HandleFunc("POST /api/refresh", handleRefresh)
+	protected.HandleFunc("GET /api/leaderboard", handleGetLeaderboard)
+	protected.HandleFunc("POST /api/leaderboard/refresh", handleRefreshLeaderboard)
 	mux.Handle("/api/", requireAuth(protected))
 
 	// Serve embedded frontend if available

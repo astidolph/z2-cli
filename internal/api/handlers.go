@@ -369,6 +369,36 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 	return query, nil
 }
 
+func handleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	page := 1
+	if v := r.URL.Query().Get("page"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeError(w, http.StatusBadRequest, "invalid page parameter")
+			return
+		}
+		page = n
+	}
+
+	result, err := service.FetchLeaderboard(page)
+	if err != nil {
+		log.Printf("Failed to fetch leaderboard: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not fetch leaderboard")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func handleRefreshLeaderboard(w http.ResponseWriter, r *http.Request) {
+	if err := service.RefreshLeaderboard(); err != nil {
+		log.Printf("Failed to refresh leaderboard: %v", err)
+		writeError(w, http.StatusInternalServerError, "could not refresh leaderboard data")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "leaderboard refreshed"})
+}
+
 // lineDataToFloats converts go-echarts LineData values to plain float64 pointers.
 // nil Values are preserved as nil so they serialize to JSON null (Chart.js skips nulls).
 func lineDataToFloats(data []opts.LineData) []*float64 {

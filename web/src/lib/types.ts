@@ -40,6 +40,13 @@ export interface ChartDataResponse {
 	hr: (number | null)[] | null;
 }
 
+export interface LeaderboardResponse {
+	runs: Activity[] | null;
+	total_count: number;
+	page: number;
+	page_size: number;
+}
+
 export interface ConfigResponse {
 	zone2_hr: number;
 }

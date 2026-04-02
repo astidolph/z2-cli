@@ -46,7 +46,7 @@
 			{#each runs as run, i}
 				<tr>
 					<td>{formatDate(run.start_date_local)}</td>
-					<td class="name">{run.name}</td>
+					<td class="name"><a href="https://www.strava.com/activities/{run.id}" target="_blank" rel="noopener noreferrer">{run.name}</a></td>
 					<td>{formatDistance(run.distance)}</td>
 					<td>{formatDuration(run.moving_time)}</td>
 					<td>{run.has_heartrate ? formatHR(run.average_heartrate) : '-'}</td>

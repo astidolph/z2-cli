@@ -1,4 +1,4 @@
-import type { RunsResponse, ChartDataResponse, ConfigResponse, AuthStatusResponse } from './types';
+import type { RunsResponse, ChartDataResponse, ConfigResponse, AuthStatusResponse, LeaderboardResponse } from './types';
 
 const BASE = '/api';
 
@@ -71,5 +71,7 @@ export const api = {
 	getConfig: () => get<ConfigResponse>('/config'),
 	putConfig: (body: { zone2_hr?: number; age?: number }) => put<ConfigResponse>('/config', body),
 	getAuthStatus: () => get<AuthStatusResponse>('/auth/status'),
-	refresh: () => post<{ status: string }>('/refresh')
+	refresh: () => post<{ status: string }>('/refresh'),
+	getLeaderboard: (page: number = 1) => get<LeaderboardResponse>(`/leaderboard?page=${page}`),
+	refreshLeaderboard: () => post<{ status: string }>('/leaderboard/refresh')
 };
