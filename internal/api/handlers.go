@@ -19,11 +19,17 @@ import (
 
 // frontendOrigin extracts the origin (scheme://host) that the user's browser
 // is on, so post-auth redirects land on the frontend (which may be the Vite
-// dev server on a different port).
+// dev server on a different port). The Referer-based origin is only trusted
+// if it shares the same hostname as the request (allowing different ports
+// for local development).
 func frontendOrigin(r *http.Request) string {
+	requestHost := stripPort(r.Host)
+
 	if ref := r.Header.Get("Referer"); ref != "" {
 		if u, err := url.Parse(ref); err == nil && u.Host != "" {
-			return u.Scheme + "://" + u.Host
+			if stripPort(u.Host) == requestHost {
+				return u.Scheme + "://" + u.Host
+			}
 		}
 	}
 	scheme := r.Header.Get("X-Forwarded-Proto")
@@ -31,6 +37,14 @@ func frontendOrigin(r *http.Request) string {
 		scheme = "http"
 	}
 	return scheme + "://" + r.Host
+}
+
+// stripPort returns the hostname portion of a host:port string.
+func stripPort(host string) string {
+	if i := strings.LastIndex(host, ":"); i != -1 {
+		return host[:i]
+	}
+	return host
 }
 
 func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
