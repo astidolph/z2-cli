@@ -30,9 +30,12 @@
 		loading = true;
 		checkAuthResult();
 		try {
-			const [config, auth] = await Promise.all([api.getConfig(), api.getAuthStatus()]);
-			zone2HR = config.zone2_hr;
+			const auth = await api.getAuthStatus();
 			authStatus = auth;
+			if (auth.authenticated) {
+				const config = await api.getConfig();
+				zone2HR = config.zone2_hr;
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load settings';
 		} finally {
