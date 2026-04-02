@@ -6,7 +6,7 @@ This is a command-line tool and web dashboard to track your zone 2 training prog
 
 ## Prerequisites
 
-- [Go 1.21+](https://go.dev/dl/)
+- [Go 1.26+](https://go.dev/dl/)
 - [Node.js 18+](https://nodejs.org/) (for the web frontend)
 - A Strava account
 - A Strava API application ([create one here](https://www.strava.com/settings/api))
@@ -96,6 +96,17 @@ Summary (last 12 weeks, 3 runs, 45.6 km / 28.3 mi total):
   Avg Pace: 5:29/km (8:49/mi)
 ```
 
+### Runs flags
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--weeks` | `-w` | `12` | Number of weeks to look back |
+| `--day` | `-d` | | Day of week to filter (e.g. sunday, monday) |
+| `--min-distance` | | | Minimum distance in km (e.g. 12 for long runs) |
+| `--sort` | | `date` | Sort by: date, distance, time, hr, pace, ef |
+| `--asc` | | `false` | Sort in ascending order (default is descending) |
+| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
+
 ### Charts
 
 Generate interactive charts that open in your browser:
@@ -111,11 +122,30 @@ z2-cli chart --weeks 24 --type all  # last 24 weeks, all charts
 
 Charts support the same filtering flags as the `runs` command (`--weeks`, `--day`, `--min-distance`, `--all`).
 
-### Web Dashboard
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--type` | `-t` | `ef` | Chart type: ef, pace, distance, hr, all |
+| `--weeks` | `-w` | `12` | Number of weeks to look back |
+| `--day` | `-d` | | Day of week to filter |
+| `--min-distance` | | | Minimum distance in km |
+| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
 
-The web UI provides the same data as the CLI in a browser-based dashboard you can access from your phone or any device.
+### Efficiency Factor (EF)
 
-#### Development mode
+EF is calculated as speed (m/s) divided by average heart rate. A higher EF means you're running faster at the same effort — the key indicator that zone 2 training is working. The summary compares your current period's EF against the prior equivalent period to show your trend.
+
+## Web Dashboard
+
+The web UI provides the same data as the CLI in a browser-based dashboard you can access from your phone or any device. Built with SvelteKit (Svelte 5) and Chart.js with a dark theme.
+
+### Pages
+
+- **Dashboard** — Summary cards (EF trend, avg HR, avg pace, total distance) with a dual-axis EF vs Heart Rate chart
+- **Runs** — Filterable table with per-run and cumulative average EF, sortable by any column
+- **Charts** — EF, pace (km + mi), distance (km + mi), and heart rate charts with configurable lookback period
+- **Settings** — Strava connection status, web-based OAuth login, and zone 2 HR configuration
+
+### Development mode
 
 Run the Go API server and SvelteKit dev server separately:
 
@@ -131,59 +161,78 @@ npm run dev
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on port 8080.
 
-#### API server only
+### API server
 
 ```bash
 z2-cli serve              # default port 8080
 z2-cli serve --port 3000  # custom port
 ```
 
-#### API Endpoints
+### API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/health` | Health check |
 | `GET` | `/api/auth/status` | Strava connection status |
+| `GET` | `/api/auth/login` | Initiate OAuth2 flow (redirects to Strava) |
+| `GET` | `/api/auth/callback` | OAuth2 callback (handles token exchange) |
 | `GET` | `/api/config` | Get zone 2 HR setting |
 | `PUT` | `/api/config` | Update zone 2 HR (by value or age) |
-| `GET` | `/api/runs` | Runs and stats (supports query params: `weeks`, `day`, `minDistance`, `all`, `sort`, `asc`) |
+| `GET` | `/api/runs` | Runs and stats (query params: `weeks`, `day`, `minDistance`, `all`, `sort`, `asc`, `refresh`) |
 | `GET` | `/api/chart-data` | Chart data arrays (same query params as runs) |
 | `POST` | `/api/refresh` | Clear the Strava API cache |
 
-#### Caching
+Config, runs, chart-data, and refresh endpoints require an authenticated session.
+
+### Caching
 
 Strava API responses are cached locally in `~/.z2-cli/cache.json` with a 15-minute TTL. This keeps the web dashboard fast and avoids hitting Strava's rate limits (100 requests per 15 minutes, 1000 per day). Use the refresh button in the dashboard or `POST /api/refresh` to clear the cache after a new run.
 
-#### Chart flags
+## Deployment
 
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--type` | `-t` | `ef` | Chart type: ef, pace, distance, hr, all |
-| `--weeks` | `-w` | `12` | Number of weeks to look back |
-| `--day` | `-d` | | Day of week to filter |
-| `--min-distance` | | | Minimum distance in km |
-| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
+### Docker
 
-### Efficiency Factor (EF)
+The project includes a multi-stage Dockerfile that builds a single self-contained binary with the frontend embedded:
 
-EF is calculated as speed (m/s) divided by average heart rate. A higher EF means you're running faster at the same effort — the key indicator that zone 2 training is working. The summary compares your current period's EF against the prior equivalent period to show your trend.
+```bash
+docker build -t z2-cli .
+docker run -p 8080:8080 -v z2-data:/home/z2user/.z2-cli z2-cli
+```
 
-### Runs flags
+The build process:
+1. Builds the SvelteKit frontend to static files
+2. Compiles the Go binary with the frontend embedded via `//go:embed`
+3. Produces a minimal Alpine image running as a non-root user
 
-| Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--weeks` | `-w` | `12` | Number of weeks to look back |
-| `--day` | `-d` | | Day of week to filter (e.g. sunday, monday) |
-| `--min-distance` | | | Minimum distance in km (e.g. 12 for long runs) |
-| `--sort` | | `date` | Sort by: date, distance, time, hr, pace, ef |
-| `--asc` | | `false` | Sort in ascending order (default is descending) |
-| `--all` | `-a` | `false` | Show all runs, skip zone 2 filtering |
+### Fly.io
+
+The project is configured for deployment on [Fly.io](https://fly.io) via `fly.toml`:
+
+- Region: `lhr` (London)
+- Force HTTPS with auto-redirect
+- Persistent volume for config, tokens, and cache (`~/.z2-cli/`)
+- Auto-stop/start machines to minimise costs when idle
+
+```bash
+fly deploy
+```
+
+### Security
+
+- **Session auth** — HMAC-SHA256 signed session cookies (HttpOnly, SameSite=Lax, Secure over HTTPS) with 7-day TTL
+- **CSRF protection** — OAuth state parameter signed and verified via cookies
+- **Security headers** — HSTS, X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy
+- **CORS** — Scoped to the local dev origin only (`localhost:5173`)
+- **Non-root container** — Docker image runs as an unprivileged user
 
 ## Project Structure
 
 ```
 z2-cli/
 ├── main.go                  # Entry point
+├── frontend_embed.go        # Embeds built frontend into binary (production builds)
+├── Dockerfile               # Multi-stage build (Node → Go → Alpine runtime)
+├── fly.toml                 # Fly.io deployment config
 ├── cmd/
 │   ├── root.go              # Root cobra command
 │   ├── auth.go              # Strava OAuth2 authentication
@@ -194,7 +243,7 @@ z2-cli/
 ├── internal/
 │   ├── api/
 │   │   ├── handlers.go      # REST API route handlers
-│   │   ├── middleware.go     # CORS middleware
+│   │   ├── middleware.go     # CORS, security headers, session auth
 │   │   ├── response.go      # JSON response helpers
 │   │   └── server.go        # HTTP server and SPA file serving
 │   ├── auth/
@@ -213,7 +262,7 @@ z2-cli/
 │   └── strava/
 │       ├── client.go        # Strava API HTTP client
 │       └── filter.go        # Weekday, HR, and distance filters
-└── web/                     # SvelteKit frontend (dark theme dashboard)
+└── web/                     # SvelteKit frontend (Svelte 5, dark theme)
     ├── src/
     │   ├── lib/
     │   │   ├── api.ts       # Typed API client
@@ -221,10 +270,10 @@ z2-cli/
     │   │   ├── format.ts    # Display formatting helpers
     │   │   └── components/  # NavBar, SummaryCard, LineChart, RunsTable, FilterBar
     │   └── routes/
-    │       ├── +page.svelte         # Dashboard (summary + EF chart)
-    │       ├── runs/+page.svelte    # Runs table with filters
-    │       ├── charts/+page.svelte  # All chart types
-    │       └── settings/+page.svelte # Zone 2 HR config
+    │       ├── +page.svelte         # Dashboard (summary + dual-axis EF/HR chart)
+    │       ├── runs/+page.svelte    # Runs table with filters and cumulative avg EF
+    │       ├── charts/+page.svelte  # All chart types with configurable lookback
+    │       └── settings/+page.svelte # Strava login + zone 2 HR config
     ├── svelte.config.js     # adapter-static for single-binary embedding
     └── vite.config.ts       # Dev proxy to Go API server
 ```
