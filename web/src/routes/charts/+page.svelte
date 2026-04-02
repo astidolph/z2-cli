@@ -1,18 +1,20 @@
 <script lang="ts">
-	import { api } from '$lib/api';
+	import { api, filtersToRunsParams } from '$lib/api';
+	import { getFilters } from '$lib/filters.svelte';
 	import type { ChartDataResponse } from '$lib/types';
 	import LineChart from '$lib/components/LineChart.svelte';
+
+	const filters = getFilters();
 
 	let chartData: ChartDataResponse | null = $state(null);
 	let error: string | null = $state(null);
 	let loading = $state(true);
-	let weeksInput = $state(12);
 
-	async function load(weeks: number) {
+	async function load() {
 		loading = true;
 		error = null;
 		try {
-			chartData = await api.getChartData({ weeks });
+			chartData = await api.getChartData(filtersToRunsParams(filters));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load chart data';
 		} finally {
@@ -20,24 +22,14 @@
 		}
 	}
 
-	function apply() {
-		load(weeksInput);
-	}
-
-	load(12);
+	$effect(() => {
+		filtersToRunsParams(filters);
+		load();
+	});
 </script>
 
 <div class="charts-page">
-	<div class="header">
-		<h1>Charts</h1>
-		<div class="controls">
-			<label>
-				<span>Weeks</span>
-				<input type="number" bind:value={weeksInput} min="1" max="104" />
-			</label>
-			<button onclick={apply}>Apply</button>
-		</div>
-	</div>
+	<h1>Charts</h1>
 
 	{#if loading}
 		<p class="status">Loading...</p>
@@ -98,52 +90,8 @@
 		gap: 1.5rem;
 	}
 
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
 	h1 {
 		font-size: 1.5rem;
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.controls label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-	}
-
-	.controls input {
-		padding: 0.375rem 0.5rem;
-		background: var(--bg-input);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		color: var(--text-primary);
-		font-size: 0.875rem;
-		width: 80px;
-	}
-
-	.controls button {
-		padding: 0.375rem 0.75rem;
-		background: var(--accent, #7c6ef0);
-		border: none;
-		border-radius: var(--radius);
-		color: #fff;
-		font-size: 0.875rem;
-		cursor: pointer;
-	}
-
-	.controls button:hover {
-		opacity: 0.85;
 	}
 
 	.card {

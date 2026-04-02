@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { api } from '$lib/api';
+	import { api, filtersToRunsParams } from '$lib/api';
+	import { getFilters } from '$lib/filters.svelte';
 	import type { RunsResponse, ChartDataResponse } from '$lib/types';
 	import SummaryCard from '$lib/components/SummaryCard.svelte';
 	import LineChart from '$lib/components/LineChart.svelte';
+
+	const filters = getFilters();
 
 	let runs: RunsResponse | null = $state(null);
 	let chartData: ChartDataResponse | null = $state(null);
@@ -13,7 +16,8 @@
 		loading = true;
 		error = null;
 		try {
-			[runs, chartData] = await Promise.all([api.getRuns(), api.getChartData()]);
+			const params = filtersToRunsParams(filters);
+			[runs, chartData] = await Promise.all([api.getRuns(params), api.getChartData(params)]);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load data';
 		} finally {
@@ -27,6 +31,7 @@
 	}
 
 	$effect(() => {
+		filtersToRunsParams(filters);
 		load();
 	});
 </script>

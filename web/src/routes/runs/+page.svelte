@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { api, type RunsParams } from '$lib/api';
+	import { api, filtersToRunsParams } from '$lib/api';
+	import { getFilters } from '$lib/filters.svelte';
 	import type { RunsResponse } from '$lib/types';
-	import FilterBar from '$lib/components/FilterBar.svelte';
 	import RunsTable from '$lib/components/RunsTable.svelte';
 	import SummaryCard from '$lib/components/SummaryCard.svelte';
 
-	let params: RunsParams = $state({ weeks: 12, sort: 'date' });
+	const filters = getFilters();
+
+	let sort = $state('date');
+	let asc = $state(false);
 	let data: RunsResponse | null = $state(null);
 	let error: string | null = $state(null);
 	let loading = $state(true);
@@ -14,7 +17,7 @@
 		loading = true;
 		error = null;
 		try {
-			data = await api.getRuns(params);
+			data = await api.getRuns(filtersToRunsParams(filters, { sort, asc }));
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load runs';
 		} finally {
@@ -22,20 +25,34 @@
 		}
 	}
 
-	function onFilterChange(newParams: RunsParams) {
-		params = newParams;
-		load();
-	}
-
 	$effect(() => {
+		filtersToRunsParams(filters);
 		load();
 	});
 </script>
 
 <div class="runs-page">
-	<h1>Runs</h1>
+	<div class="header">
+		<h1>Runs</h1>
+		<div class="sort-controls">
+			<label>
+				<span>Sort by</span>
+				<select bind:value={sort} onchange={() => load()}>
+					<option value="date">Date</option>
+					<option value="distance">Distance</option>
+					<option value="time">Time</option>
+					<option value="hr">Heart Rate</option>
+					<option value="pace">Pace</option>
+					<option value="ef">EF</option>
+				</select>
+			</label>
 
-	<FilterBar {params} onchange={onFilterChange} />
+			<label class="checkbox-label">
+				<input type="checkbox" bind:checked={asc} onchange={() => load()} />
+				<span>Ascending</span>
+			</label>
+		</div>
+	</div>
 
 	{#if loading}
 		<p class="status">Loading...</p>
@@ -61,8 +78,50 @@
 		gap: 1.5rem;
 	}
 
+	.header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+	}
+
 	h1 {
 		font-size: 1.5rem;
+	}
+
+	.sort-controls {
+		display: flex;
+		align-items: flex-end;
+		gap: 1rem;
+	}
+
+	.sort-controls label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.sort-controls select {
+		padding: 0.375rem 0.5rem;
+		background: var(--bg-input);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--text-primary);
+		font-size: 0.875rem;
+	}
+
+	.checkbox-label {
+		flex-direction: row;
+		align-items: center;
+		gap: 0.375rem;
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		padding-bottom: 0.375rem;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		accent-color: var(--accent);
 	}
 
 	.status {
