@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 		mux.Handle("/", spaHandler(s.frontendFS))
 	}
 
-	handler := cors(mux)
+	handler := securityHeaders(cors(mux))
 
 	fmt.Printf("z2-cli API server running at http://localhost%s\n", s.addr)
 	return http.ListenAndServe(s.addr, handler)
