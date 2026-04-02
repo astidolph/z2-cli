@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"strings"
 )
 
 var sessionKey []byte
@@ -19,10 +20,21 @@ func init() {
 
 const sessionCookieName = "z2_session"
 
+// signSession generates a session token as "nonce.signature" where the nonce
+// is random and the signature is HMAC-SHA256(nonce). Each call produces a
+// unique token.
 func signSession() string {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		panic("failed to generate session nonce: " + err.Error())
+	}
+	nonceHex := hex.EncodeToString(nonce)
+
 	mac := hmac.New(sha256.New, sessionKey)
-	mac.Write([]byte("z2-authenticated"))
-	return hex.EncodeToString(mac.Sum(nil))
+	mac.Write([]byte(nonceHex))
+	sig := hex.EncodeToString(mac.Sum(nil))
+
+	return nonceHex + "." + sig
 }
 
 func setSessionCookie(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +58,14 @@ func validSession(r *http.Request) bool {
 	if err != nil {
 		return false
 	}
-	return hmac.Equal([]byte(cookie.Value), []byte(signSession()))
+	parts := strings.SplitN(cookie.Value, ".", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	mac := hmac.New(sha256.New, sessionKey)
+	mac.Write([]byte(parts[0]))
+	expected := hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(parts[1]), []byte(expected))
 }
 
 func requireAuth(next http.Handler) http.Handler {
