@@ -1,4 +1,5 @@
 import type { RunsResponse, ChartDataResponse, ConfigResponse, AuthStatusResponse, LeaderboardResponse } from './types';
+import type { GlobalFilters } from './filters.svelte';
 
 const BASE = '/api';
 
@@ -82,6 +83,31 @@ function buildLeaderboardQuery(params: LeaderboardParams): string {
 	if (params.maxHR) q.set('maxHR', String(params.maxHR));
 	const str = q.toString();
 	return str ? `?${str}` : '';
+}
+
+const KM_TO_METERS = 1000;
+
+/** Convert global filters to RunsParams for /api/runs and /api/chart-data */
+export function filtersToRunsParams(f: GlobalFilters, extra?: Pick<RunsParams, 'sort' | 'asc'>): RunsParams {
+	const p: RunsParams = {};
+	if (f.weeks > 0) p.weeks = f.weeks;
+	if (f.day) p.day = f.day;
+	if (f.minDistance > 0) p.minDistance = f.minDistance;
+	if (f.showAll) p.all = true;
+	if (extra?.sort) p.sort = extra.sort;
+	if (extra?.asc) p.asc = extra.asc;
+	return p;
+}
+
+/** Convert global filters to LeaderboardParams for /api/leaderboard */
+export function filtersToLeaderboardParams(f: GlobalFilters, extra?: { page?: number }): LeaderboardParams {
+	const p: LeaderboardParams = {};
+	if (f.year > 0) p.year = f.year;
+	if (f.minDistance > 0) p.minDistance = f.minDistance * KM_TO_METERS;
+	if (f.maxDistance > 0) p.maxDistance = f.maxDistance * KM_TO_METERS;
+	if (f.maxHR > 0) p.maxHR = f.maxHR;
+	if (extra?.page) p.page = extra.page;
+	return p;
 }
 
 export const api = {

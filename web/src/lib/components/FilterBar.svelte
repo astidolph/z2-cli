@@ -1,33 +1,80 @@
 <script lang="ts">
-	import type { RunsParams } from '$lib/api';
+	import { getFilters, setFilters, resetFilters } from '$lib/filters.svelte';
 
-	let { params: initialParams, onchange }: { params: RunsParams; onchange: (p: RunsParams) => void } = $props();
+	let { onchange }: { onchange: () => void } = $props();
 
-	let weeks = $state(initialParams.weeks ?? 12);
-	let day = $state(initialParams.day ?? '');
-	let minDistance = $state(initialParams.minDistance ?? 0);
-	let showAll = $state(initialParams.all ?? false);
-	let sort = $state(initialParams.sort ?? 'date');
-	let asc = $state(initialParams.asc ?? false);
+	const filters = getFilters();
+
+	const currentYear = new Date().getFullYear();
+	const yearOptions: number[] = [];
+	for (let y = currentYear; y >= 2008; y--) {
+		yearOptions.push(y);
+	}
+
+	// Local staging state — copied from store, committed on Apply
+	let weeks = $state(filters.weeks);
+	let year = $state(filters.year);
+	let day = $state(filters.day);
+	let minDistance = $state(filters.minDistance);
+	let maxDistance = $state(filters.maxDistance);
+	let maxHR = $state(filters.maxHR);
+	let showAll = $state(filters.showAll);
+
+	// Track whether weeks or year is the active time mode
+	let timeMode = $derived<'weeks' | 'year'>(filters.year > 0 ? 'year' : 'weeks');
 
 	function apply() {
-		onchange({
-			weeks,
-			day: day || undefined,
-			minDistance: minDistance || undefined,
-			all: showAll || undefined,
-			sort,
-			asc: asc || undefined
-		});
+		if (timeMode === 'weeks') {
+			setFilters({ weeks, year: 0, day, minDistance, maxDistance, maxHR, showAll });
+		} else {
+			setFilters({ weeks: 0, year, day, minDistance, maxDistance, maxHR, showAll });
+		}
+		onchange();
+	}
+
+	function reset() {
+		resetFilters();
+		const f = getFilters();
+		weeks = f.weeks;
+		year = f.year;
+		day = f.day;
+		minDistance = f.minDistance;
+		maxDistance = f.maxDistance;
+		maxHR = f.maxHR;
+		showAll = f.showAll;
+		onchange();
+	}
+
+	function setTimeMode(mode: 'weeks' | 'year') {
+		if (mode === 'weeks') {
+			year = 0;
+			if (!weeks) weeks = 12;
+			setFilters({ weeks, year: 0 });
+		} else {
+			weeks = 0;
+			if (!year) year = currentYear;
+			setFilters({ weeks: 0, year });
+		}
 	}
 </script>
 
 <div class="card filter-bar">
 	<div class="filter-row">
-		<label>
-			<span>Weeks</span>
-			<input type="number" bind:value={weeks} min="1" max="104" />
-		</label>
+		<div class="time-group">
+			<div class="time-toggle">
+				<button class:active={timeMode === 'weeks'} onclick={() => setTimeMode('weeks')}>Weeks</button>
+				<button class:active={timeMode === 'year'} onclick={() => setTimeMode('year')}>Year</button>
+			</div>
+			{#if timeMode === 'weeks'}
+				<input type="number" bind:value={weeks} min="1" max="104" />
+			{:else}
+				<select bind:value={year}>
+					{#each yearOptions as y}
+						<option value={y}>{y}</option>
+					{/each}
+				</select>
+			{/if}
+		</div>
 
 		<label>
 			<span>Day</span>
@@ -49,20 +96,13 @@
 		</label>
 
 		<label>
-			<span>Sort by</span>
-			<select bind:value={sort}>
-				<option value="date">Date</option>
-				<option value="distance">Distance</option>
-				<option value="time">Time</option>
-				<option value="hr">Heart Rate</option>
-				<option value="pace">Pace</option>
-				<option value="ef">EF</option>
-			</select>
+			<span>Max Distance (km)</span>
+			<input type="number" bind:value={maxDistance} min="0" step="0.5" placeholder="No limit" />
 		</label>
 
-		<label class="checkbox-label">
-			<input type="checkbox" bind:checked={asc} />
-			<span>Ascending</span>
+		<label>
+			<span>Max Avg HR</span>
+			<input type="number" bind:value={maxHR} min="0" step="1" placeholder="No limit" />
 		</label>
 
 		<label class="checkbox-label">
@@ -71,12 +111,13 @@
 		</label>
 
 		<button class="btn btn-primary" onclick={apply}>Apply</button>
+		<button class="btn btn-reset" onclick={reset}>Reset</button>
 	</div>
 </div>
 
 <style>
 	.filter-bar {
-		padding: 1rem 1.25rem;
+		padding: 0.75rem 1.25rem;
 	}
 
 	.filter-row {
@@ -116,5 +157,55 @@
 
 	.checkbox-label input[type='checkbox'] {
 		accent-color: var(--accent);
+	}
+
+	.time-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.time-toggle {
+		display: flex;
+		gap: 0;
+	}
+
+	.time-toggle button {
+		padding: 0.2rem 0.5rem;
+		font-size: 0.7rem;
+		border: 1px solid var(--border);
+		background: var(--bg-input);
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+
+	.time-toggle button:first-child {
+		border-radius: var(--radius) 0 0 var(--radius);
+	}
+
+	.time-toggle button:last-child {
+		border-radius: 0 var(--radius) var(--radius) 0;
+		border-left: none;
+	}
+
+	.time-toggle button.active {
+		background: var(--accent);
+		color: #fff;
+		border-color: var(--accent);
+	}
+
+	.btn-reset {
+		padding: 0.375rem 0.75rem;
+		background: var(--bg-input);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.btn-reset:hover {
+		color: var(--text-primary);
+		border-color: var(--text-secondary);
 	}
 </style>
