@@ -26,7 +26,8 @@
 	}
 
 	$effect(() => {
-		filtersToRunsParams(filters);
+		// Read reactive properties so Svelte tracks them as dependencies
+		void [filters.weeks, filters.year, filters.day, filters.minDistance, filters.maxDistance, filters.maxHR, filters.showAll];
 		load();
 	});
 </script>

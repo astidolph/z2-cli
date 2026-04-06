@@ -44,7 +44,8 @@
 	}
 
 	$effect(() => {
-		filtersToLeaderboardParams(filters);
+		// Read reactive properties so Svelte tracks them as dependencies
+		void [filters.weeks, filters.year, filters.day, filters.minDistance, filters.maxDistance, filters.maxHR, filters.showAll];
 		page = 1;
 		load();
 	});
