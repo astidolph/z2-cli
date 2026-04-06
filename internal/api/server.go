@@ -16,6 +16,10 @@ func NewServer(addr string, frontendFS fs.FS) *Server {
 }
 
 func (s *Server) Start() error {
+	if err := InitSessionKey(); err != nil {
+		return err
+	}
+
 	mux := http.NewServeMux()
 
 	// Public routes (no auth required)

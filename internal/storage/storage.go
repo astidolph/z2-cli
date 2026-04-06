@@ -18,5 +18,8 @@ type Store interface {
 	LoadHistory() *model.HistoryData
 	SaveHistory(data *model.HistoryData) error
 
+	LoadSessionKey() ([]byte, error)
+	SaveSessionKey(key []byte) error
+
 	Close()
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -153,4 +154,19 @@ func (p *PGStore) LoadHistory() *model.HistoryData {
 
 func (p *PGStore) SaveHistory(history *model.HistoryData) error {
 	return p.save("history", history)
+}
+
+// --- Session Key ---
+
+func (p *PGStore) LoadSessionKey() ([]byte, error) {
+	var hexKey string
+	if err := p.load("session_key", &hexKey); err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(hexKey)
+}
+
+func (p *PGStore) SaveSessionKey(key []byte) error {
+	hexKey := hex.EncodeToString(key)
+	return p.save("session_key", &hexKey)
 }

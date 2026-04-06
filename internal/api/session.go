@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/z2-cli/internal/storage"
 )
 
 // isSecureOrigin returns true when the cookie Secure flag should be set.
@@ -20,11 +23,27 @@ func isSecureOrigin(r *http.Request) bool {
 
 var sessionKey []byte
 
-func init() {
-	sessionKey = make([]byte, 32)
-	if _, err := rand.Read(sessionKey); err != nil {
-		panic("failed to generate session key: " + err.Error())
+// InitSessionKey loads the session signing key from storage, generating and
+// persisting a new one if none exists. This must be called before the server
+// starts handling requests.
+func InitSessionKey() error {
+	store := storage.Get()
+	key, err := store.LoadSessionKey()
+	if err == nil && len(key) == 32 {
+		sessionKey = key
+		return nil
 	}
+
+	// Generate a new key and persist it.
+	key = make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return fmt.Errorf("failed to generate session key: %w", err)
+	}
+	if err := store.SaveSessionKey(key); err != nil {
+		return fmt.Errorf("failed to persist session key: %w", err)
+	}
+	sessionKey = key
+	return nil
 }
 
 const sessionCookieName = "z2_session"

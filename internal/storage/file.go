@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/z2-cli/internal/model"
 )
@@ -145,4 +147,18 @@ func (f *FileStore) SaveHistory(history *model.HistoryData) error {
 		return fmt.Errorf("could not save history: %w", err)
 	}
 	return nil
+}
+
+// --- Session Key ---
+
+func (f *FileStore) LoadSessionKey() ([]byte, error) {
+	data, err := os.ReadFile(f.path("session_key"))
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(strings.TrimSpace(string(data)))
+}
+
+func (f *FileStore) SaveSessionKey(key []byte) error {
+	return os.WriteFile(f.path("session_key"), []byte(hex.EncodeToString(key)), 0600)
 }
