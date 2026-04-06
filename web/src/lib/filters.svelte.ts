@@ -25,10 +25,29 @@ const defaults: GlobalFilters = {
 	showAll: false
 };
 
-let filters = $state<GlobalFilters>({ ...defaults });
+// Individual reactive properties — ensures fine-grained Svelte 5 tracking
+let weeks = $state(defaults.weeks);
+let year = $state(defaults.year);
+let day = $state(defaults.day);
+let minDistance = $state(defaults.minDistance);
+let maxDistance = $state(defaults.maxDistance);
+let maxHR = $state(defaults.maxHR);
+let showAll = $state(defaults.showAll);
 
+/**
+ * Returns a reactive object backed by individual $state variables.
+ * Reading any property inside a $derived or $effect will track it.
+ */
 export function getFilters(): GlobalFilters {
-	return filters;
+	return {
+		get weeks() { return weeks; },
+		get year() { return year; },
+		get day() { return day; },
+		get minDistance() { return minDistance; },
+		get maxDistance() { return maxDistance; },
+		get maxHR() { return maxHR; },
+		get showAll() { return showAll; },
+	} as GlobalFilters;
 }
 
 export function setFilters(patch: Partial<GlobalFilters>) {
@@ -38,9 +57,22 @@ export function setFilters(patch: Partial<GlobalFilters>) {
 	} else if (patch.year !== undefined && patch.year > 0) {
 		patch.weeks = 0;
 	}
-	Object.assign(filters, patch);
+
+	if (patch.weeks !== undefined) weeks = patch.weeks;
+	if (patch.year !== undefined) year = patch.year;
+	if (patch.day !== undefined) day = patch.day;
+	if (patch.minDistance !== undefined) minDistance = patch.minDistance;
+	if (patch.maxDistance !== undefined) maxDistance = patch.maxDistance;
+	if (patch.maxHR !== undefined) maxHR = patch.maxHR;
+	if (patch.showAll !== undefined) showAll = patch.showAll;
 }
 
 export function resetFilters() {
-	Object.assign(filters, { ...defaults });
+	weeks = defaults.weeks;
+	year = defaults.year;
+	day = defaults.day;
+	minDistance = defaults.minDistance;
+	maxDistance = defaults.maxDistance;
+	maxHR = defaults.maxHR;
+	showAll = defaults.showAll;
 }
