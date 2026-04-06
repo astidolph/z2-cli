@@ -11,12 +11,17 @@
 		yearOptions.push(y);
 	}
 
+	const KM_PER_MILE = 1.60934;
+	function kmToMi(km: number): number { return km > 0 ? Math.round(km / KM_PER_MILE * 100) / 100 : 0; }
+	function miToKm(mi: number): number { return mi > 0 ? mi * KM_PER_MILE : 0; }
+
 	// Local staging state — copied from store, committed on Apply
+	// Distance values displayed in miles, stored as km in the global store
 	let weeks = $state(filters.weeks);
 	let year = $state(filters.year);
 	let day = $state(filters.day);
-	let minDistance = $state(filters.minDistance);
-	let maxDistance = $state(filters.maxDistance);
+	let minDistance = $state(kmToMi(filters.minDistance));
+	let maxDistance = $state(kmToMi(filters.maxDistance));
 	let maxHR = $state(filters.maxHR);
 	let showAll = $state(filters.showAll);
 
@@ -24,10 +29,15 @@
 	let timeMode = $derived<'weeks' | 'year'>(filters.year > 0 ? 'year' : 'weeks');
 
 	function apply() {
+		const patch = {
+			day, maxHR, showAll,
+			minDistance: miToKm(minDistance),
+			maxDistance: miToKm(maxDistance),
+		};
 		if (timeMode === 'weeks') {
-			setFilters({ weeks, year: 0, day, minDistance, maxDistance, maxHR, showAll });
+			setFilters({ ...patch, weeks, year: 0 });
 		} else {
-			setFilters({ weeks: 0, year, day, minDistance, maxDistance, maxHR, showAll });
+			setFilters({ ...patch, weeks: 0, year });
 		}
 		onchange();
 	}
@@ -38,8 +48,8 @@
 		weeks = f.weeks;
 		year = f.year;
 		day = f.day;
-		minDistance = f.minDistance;
-		maxDistance = f.maxDistance;
+		minDistance = kmToMi(f.minDistance);
+		maxDistance = kmToMi(f.maxDistance);
 		maxHR = f.maxHR;
 		showAll = f.showAll;
 		onchange();
@@ -91,12 +101,12 @@
 		</label>
 
 		<label>
-			<span>Min Distance (km)</span>
+			<span>Min Distance (mi)</span>
 			<input type="number" bind:value={minDistance} min="0" step="0.5" />
 		</label>
 
 		<label>
-			<span>Max Distance (km)</span>
+			<span>Max Distance (mi)</span>
 			<input type="number" bind:value={maxDistance} min="0" step="0.5" placeholder="No limit" />
 		</label>
 
