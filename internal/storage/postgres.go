@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,8 @@ type PGStore struct {
 func NewPGStore(ctx context.Context, databaseURL string) (*PGStore, error) {
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to database: %w", err)
+		log.Printf("database connection error: %v", err)
+		return nil, fmt.Errorf("could not connect to database")
 	}
 
 	_, err = pool.Exec(ctx, `
@@ -33,7 +35,8 @@ func NewPGStore(ctx context.Context, databaseURL string) (*PGStore, error) {
 	`)
 	if err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("could not create kv table: %w", err)
+		log.Printf("database migration error: %v", err)
+		return nil, fmt.Errorf("could not create kv table")
 	}
 
 	return &PGStore{pool: pool}, nil
@@ -51,7 +54,8 @@ func (p *PGStore) load(key string, dest any) error {
 		return err
 	}
 	if err != nil {
-		return fmt.Errorf("could not read %s: %w", key, err)
+		log.Printf("database read error for %s: %v", key, err)
+		return fmt.Errorf("could not read %s", key)
 	}
 	return json.Unmarshal(raw, dest)
 }
@@ -66,7 +70,8 @@ func (p *PGStore) save(key string, value any) error {
 		 ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()`,
 		key, data)
 	if err != nil {
-		return fmt.Errorf("could not save %s: %w", key, err)
+		log.Printf("database write error for %s: %v", key, err)
+		return fmt.Errorf("could not save %s", key)
 	}
 	return nil
 }
@@ -138,8 +143,12 @@ func (p *PGStore) SaveCache(cached *model.CachedData) error {
 
 func (p *PGStore) InvalidateCache() error {
 	_, err := p.pool.Exec(context.Background(),
-		`DELETE FROM kv WHERE key = 'cache'`)
-	return err
+		`DELETE FROM kv WHERE key = $1`, "cache")
+	if err != nil {
+		log.Printf("database delete error for cache: %v", err)
+		return fmt.Errorf("could not invalidate cache")
+	}
+	return nil
 }
 
 // --- History ---
