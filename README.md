@@ -204,18 +204,23 @@ The build process:
 2. Compiles the Go binary with the frontend embedded via `//go:embed`
 3. Produces a minimal Alpine image running as a non-root user
 
-### Fly.io
+### Render
 
-The project is configured for deployment on [Fly.io](https://fly.io) via `fly.toml`:
+The project is configured for deployment on [Render](https://render.com) via `render.yaml`:
 
-- Region: `lhr` (London)
-- Force HTTPS with auto-redirect
-- Persistent volume for config, tokens, and cache (`~/.z2-cli/`)
-- Auto-stop/start machines to minimise costs when idle
+- Region: `frankfurt`
+- Free tier web service with Docker runtime
+- Persistent disk for config, tokens, and cache (`~/.z2-cli/`)
+- Health checks via `/api/health`
+
+Deploy via the Render dashboard by connecting your GitHub repo, or use the Blueprint:
 
 ```bash
-fly deploy
+# Connect repo at https://dashboard.render.com/select-repo?type=blueprint
+# Render auto-detects render.yaml and configures the service
 ```
+
+The server respects the `PORT` environment variable set by Render.
 
 ### Security
 
@@ -232,7 +237,7 @@ z2-cli/
 ├── main.go                  # Entry point
 ├── frontend_embed.go        # Embeds built frontend into binary (production builds)
 ├── Dockerfile               # Multi-stage build (Node → Go → Alpine runtime)
-├── fly.toml                 # Fly.io deployment config
+├── render.yaml              # Render deployment blueprint
 ├── cmd/
 │   ├── root.go              # Root cobra command
 │   ├── auth.go              # Strava OAuth2 authentication

@@ -21,5 +21,6 @@ RUN apk add --no-cache ca-certificates
 RUN adduser -D -h /home/z2user z2user
 COPY --from=backend /app/z2-cli /usr/local/bin/z2-cli
 USER z2user
+ENV PORT=8080
 EXPOSE 8080
 CMD ["z2-cli", "serve"]

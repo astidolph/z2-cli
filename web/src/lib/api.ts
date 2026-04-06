@@ -74,7 +74,9 @@ function buildQuery(params: RunsParams): string {
 
 export interface LeaderboardParams {
 	page?: number;
+	weeks?: number;
 	year?: number;
+	day?: string;
 	minDistance?: number;
 	maxDistance?: number;
 	maxHR?: number;
@@ -83,7 +85,9 @@ export interface LeaderboardParams {
 function buildLeaderboardQuery(params: LeaderboardParams): string {
 	const q = new URLSearchParams();
 	if (params.page) q.set('page', String(params.page));
+	if (params.weeks) q.set('weeks', String(params.weeks));
 	if (params.year) q.set('year', String(params.year));
+	if (params.day) q.set('day', params.day);
 	if (params.minDistance) q.set('minDistance', String(params.minDistance));
 	if (params.maxDistance) q.set('maxDistance', String(params.maxDistance));
 	if (params.maxHR) q.set('maxHR', String(params.maxHR));
@@ -111,7 +115,11 @@ export function filtersToRunsParams(f: GlobalFilters, extra?: Pick<RunsParams, '
 /** Convert global filters to LeaderboardParams for /api/leaderboard */
 export function filtersToLeaderboardParams(f: GlobalFilters, extra?: { page?: number }): LeaderboardParams {
 	const p: LeaderboardParams = {};
-	if (f.year > 0) p.year = f.year;
+	if (!f.showAll) {
+		if (f.weeks > 0) p.weeks = f.weeks;
+		if (f.year > 0) p.year = f.year;
+	}
+	if (f.day) p.day = f.day;
 	if (f.minDistance > 0) p.minDistance = f.minDistance * KM_TO_METERS;
 	if (f.maxDistance > 0) p.maxDistance = f.maxDistance * KM_TO_METERS;
 	if (f.maxHR > 0) p.maxHR = f.maxHR;

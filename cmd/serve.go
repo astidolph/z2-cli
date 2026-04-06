@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 	"github.com/z2-cli/internal/api"
@@ -13,6 +15,14 @@ var serveCmd = &cobra.Command{
 	Long:  "Start an HTTP server that exposes the z2-cli data as a REST API for the web frontend.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		port, _ := cmd.Flags().GetInt("port")
+
+		// Render (and other PaaS) set PORT env var
+		if envPort := os.Getenv("PORT"); envPort != "" && !cmd.Flags().Changed("port") {
+			if p, err := strconv.Atoi(envPort); err == nil {
+				port = p
+			}
+		}
+
 		addr := fmt.Sprintf(":%d", port)
 
 		server := api.NewServer(addr, FrontendFS)

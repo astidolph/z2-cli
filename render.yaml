@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: z2-cli
+    runtime: docker
+    region: frankfurt
+    plan: free
+    healthCheckPath: /api/health
+    disk:
+      name: z2-data
+      mountPath: /home/z2user/.z2-cli
+      sizeGB: 1

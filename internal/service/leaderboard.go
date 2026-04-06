@@ -17,6 +17,8 @@ const defaultMinDistanceMeters = 4828.03
 type LeaderboardQuery struct {
 	Page        int
 	Year        int     // 0 means all years
+	Weeks       int     // 0 means all time
+	Day         string  // "" means all days
 	MinDistance  float64 // meters, 0 means use default (3 miles)
 	MaxDistance  float64 // meters, 0 means no upper limit
 	MaxHR       float64 // 0 means no limit
@@ -47,6 +49,24 @@ func FetchLeaderboard(query LeaderboardQuery) (*LeaderboardResult, error) {
 		minDist = defaultMinDistanceMeters
 	}
 
+	// Compute the cutoff for weeks-based filtering.
+	var weeksCutoff time.Time
+	if query.Weeks > 0 {
+		weeksCutoff = time.Now().AddDate(0, 0, -7*query.Weeks)
+	}
+
+	// Parse day filter once if set.
+	var dayFilter time.Weekday
+	var filterByDay bool
+	if query.Day != "" {
+		d, err := parseWeekday(query.Day)
+		if err != nil {
+			return nil, err
+		}
+		dayFilter = d
+		filterByDay = true
+	}
+
 	var eligible []strava.Activity
 	for _, a := range history.Activities {
 		if !a.HasHeartrate || stats.EfficiencyFactor(a) <= 0 {
@@ -61,10 +81,18 @@ func FetchLeaderboard(query LeaderboardQuery) (*LeaderboardResult, error) {
 		if query.MaxHR > 0 && a.AverageHeartrate > query.MaxHR {
 			continue
 		}
-		if query.Year > 0 {
-			if t, err := a.StartTime(); err == nil && t.Year() != query.Year {
-				continue
-			}
+		t, err := a.StartTime()
+		if err != nil {
+			continue
+		}
+		if query.Year > 0 && t.Year() != query.Year {
+			continue
+		}
+		if !weeksCutoff.IsZero() && t.Before(weeksCutoff) {
+			continue
+		}
+		if filterByDay && t.Weekday() != dayFilter {
+			continue
 		}
 		eligible = append(eligible, a)
 	}

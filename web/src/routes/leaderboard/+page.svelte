@@ -40,13 +40,17 @@
 
 	function goToPage(p: number) {
 		page = p;
-		load();
 	}
 
 	$effect(() => {
-		// Read reactive properties so Svelte tracks them as dependencies
+		// Reset to page 1 when any filter changes
 		void [filters.weeks, filters.year, filters.day, filters.minDistance, filters.maxDistance, filters.maxHR, filters.showAll];
 		page = 1;
+	});
+
+	$effect(() => {
+		// Load data whenever page changes (covers both filter resets and manual pagination)
+		void page;
 		load();
 	});
 

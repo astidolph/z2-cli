@@ -426,6 +426,16 @@ func parseLeaderboardQuery(r *http.Request) (service.LeaderboardQuery, error) {
 		}
 		query.Year = n
 	}
+	if v := q.Get("weeks"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return query, fmt.Errorf("invalid weeks parameter")
+		}
+		query.Weeks = n
+	}
+	if v := q.Get("day"); v != "" {
+		query.Day = v
+	}
 	if v := q.Get("minDistance"); v != "" {
 		f, err := strconv.ParseFloat(v, 64)
 		if err != nil || f < 0 {
