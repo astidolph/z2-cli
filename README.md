@@ -143,7 +143,10 @@ The web UI provides the same data as the CLI in a browser-based dashboard you ca
 - **Dashboard** — Summary cards (EF trend, avg HR, avg pace, total distance) with a dual-axis EF vs Heart Rate chart
 - **Runs** — Filterable table with per-run and cumulative average EF, sortable by any column
 - **Charts** — EF, pace (km + mi), distance (km + mi), and heart rate charts with configurable lookback period
+- **Leaderboard** — All-time EF rankings from your full Strava history with pagination, synced incrementally
 - **Settings** — Strava connection status, web-based OAuth login, and zone 2 HR configuration
+
+All pages share a global filter bar with weeks/year toggle, day of week, distance range, max HR, and a "show all" option to skip zone 2 filtering.
 
 ### Development mode
 
@@ -178,15 +181,19 @@ z2-cli serve --port 3000  # custom port
 | `GET` | `/api/auth/callback` | OAuth2 callback (handles token exchange) |
 | `GET` | `/api/config` | Get zone 2 HR setting |
 | `PUT` | `/api/config` | Update zone 2 HR (by value or age) |
-| `GET` | `/api/runs` | Runs and stats (query params: `weeks`, `day`, `minDistance`, `all`, `sort`, `asc`, `refresh`) |
+| `GET` | `/api/runs` | Runs and stats (query params: `weeks`, `year`, `day`, `minDistance`, `maxDistance`, `maxHR`, `all`, `sort`, `asc`, `refresh`) |
 | `GET` | `/api/chart-data` | Chart data arrays (same query params as runs) |
 | `POST` | `/api/refresh` | Clear the Strava API cache |
+| `GET` | `/api/leaderboard` | Paginated EF rankings from full history (query params: `page`, `weeks`, `year`, `day`, `minDistance`, `maxDistance`, `maxHR`) |
+| `POST` | `/api/leaderboard/refresh` | Sync full run history from Strava (incremental) |
 
-Config, runs, chart-data, and refresh endpoints require an authenticated session.
+Config, runs, chart-data, refresh, and leaderboard endpoints require an authenticated session.
 
 ### Caching
 
 Strava API responses are cached locally in `~/.z2-cli/cache.json` with a 15-minute TTL. This keeps the web dashboard fast and avoids hitting Strava's rate limits (100 requests per 15 minutes, 1000 per day). Use the refresh button in the dashboard or `POST /api/refresh` to clear the cache after a new run.
+
+The leaderboard uses a separate persistent cache (`~/.z2-cli/history.json`) that stores your full Strava history. It syncs incrementally — only fetching runs newer than the last sync.
 
 ## Deployment
 
@@ -248,37 +255,42 @@ z2-cli/
 ├── internal/
 │   ├── api/
 │   │   ├── handlers.go      # REST API route handlers
-│   │   ├── middleware.go     # CORS, security headers, session auth
+│   │   ├── middleware.go     # CORS, security headers
 │   │   ├── response.go      # JSON response helpers
+│   │   ├── session.go       # HMAC-SHA256 session cookie auth
 │   │   └── server.go        # HTTP server and SPA file serving
 │   ├── auth/
 │   │   ├── config.go        # Config persistence (API creds + zone 2 HR)
 │   │   ├── oauth.go         # OAuth2 flow and token refresh
 │   │   └── token.go         # Token storage
 │   ├── cache/
-│   │   └── cache.go         # File-based Strava API response cache
+│   │   ├── cache.go         # File-based Strava API response cache
+│   │   └── history.go       # Persistent full-history cache for leaderboard
 │   ├── chart/
 │   │   └── chart.go         # go-echarts chart rendering (EF, pace, distance, HR)
 │   ├── service/
-│   │   └── runs.go          # Core data logic (fetch, filter, sort, summarise)
+│   │   ├── runs.go          # Core data logic (fetch, filter, sort, summarise)
+│   │   └── leaderboard.go   # EF rankings with pagination and full history sync
 │   ├── stats/
 │   │   ├── efficiency.go    # Efficiency factor calculation
 │   │   └── summary.go       # Period summaries and trend comparison
 │   └── strava/
 │       ├── client.go        # Strava API HTTP client
-│       └── filter.go        # Weekday, HR, and distance filters
+│       └── filter.go        # Filters: weekday, year, max HR, min/max distance
 └── web/                     # SvelteKit frontend (Svelte 5, dark theme)
     ├── src/
     │   ├── lib/
-    │   │   ├── api.ts       # Typed API client
-    │   │   ├── types.ts     # TypeScript interfaces matching Go types
-    │   │   ├── format.ts    # Display formatting helpers
-    │   │   └── components/  # NavBar, SummaryCard, LineChart, RunsTable, FilterBar
+    │   │   ├── api.ts              # Typed API client
+    │   │   ├── types.ts            # TypeScript interfaces matching Go types
+    │   │   ├── format.ts           # Display formatting helpers
+    │   │   ├── filters.svelte.ts   # Global reactive filter store (Svelte 5 runes)
+    │   │   └── components/         # NavBar, SummaryCard, LineChart, RunsTable, FilterBar
     │   └── routes/
-    │       ├── +page.svelte         # Dashboard (summary + dual-axis EF/HR chart)
-    │       ├── runs/+page.svelte    # Runs table with filters and cumulative avg EF
-    │       ├── charts/+page.svelte  # All chart types with configurable lookback
-    │       └── settings/+page.svelte # Strava login + zone 2 HR config
+    │       ├── +page.svelte              # Dashboard (summary + dual-axis EF/HR chart)
+    │       ├── runs/+page.svelte         # Runs table with sorting
+    │       ├── charts/+page.svelte       # All chart types with configurable lookback
+    │       ├── leaderboard/+page.svelte  # Paginated all-time EF rankings
+    │       └── settings/+page.svelte     # Strava login + zone 2 HR config
     ├── svelte.config.js     # adapter-static for single-binary embedding
     └── vite.config.ts       # Dev proxy to Go API server
 ```

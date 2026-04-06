@@ -45,19 +45,21 @@ CLI commands / Web UI
 
 ### Backend Packages
 - **cmd/** — Cobra CLI commands (auth, config, runs, chart, serve)
-- **internal/api/** — REST API: handlers, CORS middleware, SPA file serving. Routes under `/api/` (health, auth/status, config, runs, chart-data, refresh)
-- **internal/service/** — Core orchestrator. `FetchRuns()` returns structured `RunsResult` with current/prior period data for trend comparison
-- **internal/strava/** — Strava v3 API client with pagination; filters by weekday, max HR, min distance
+- **internal/api/** — REST API: handlers, CORS middleware, session auth, SPA file serving. Routes under `/api/` (health, auth/status, config, runs, chart-data, refresh, leaderboard)
+- **internal/service/** — Core orchestrator. `FetchRuns()` returns structured `RunsResult` with current/prior period data for trend comparison. `Leaderboard()` provides paginated EF rankings from full history
+- **internal/strava/** — Strava v3 API client with pagination; filters by weekday, year, max HR, min/max distance
 - **internal/stats/** — EF calculation and summary aggregation (avg EF, HR, pace, total km, trend %)
-- **internal/cache/** — File-based JSON cache with TTL and coverage-aware freshness
+- **internal/cache/** — File-based JSON cache with TTL and coverage-aware freshness. Separate persistent history cache for leaderboard with incremental sync
 - **internal/chart/** — go-echarts chart generation (EF, pace, distance, HR, combined)
 - **internal/auth/** — OAuth2 flow (callback on :8089), token refresh, config persistence
 
 ### Frontend Structure (web/src/)
-- **lib/types.ts** — TypeScript interfaces mirroring Go structs (Activity, Summary, RunsResponse, ChartDataResponse)
+- **lib/types.ts** — TypeScript interfaces mirroring Go structs (Activity, Summary, RunsResponse, ChartDataResponse, LeaderboardResponse)
 - **lib/api.ts** — Typed HTTP client with query parameter builders
+- **lib/filters.svelte.ts** — Global reactive filter store using Svelte 5 runes, shared across all pages (weeks/year, day, distance range, max HR, show all)
+- **lib/format.ts** — Display formatting helpers (distance, pace, EF, HR, duration)
 - **lib/components/** — NavBar, SummaryCard, LineChart (Chart.js), RunsTable, FilterBar
-- **routes/** — SvelteKit pages: dashboard (/), runs (/runs), charts (/charts), settings (/settings)
+- **routes/** — SvelteKit pages: dashboard (/), runs (/runs), charts (/charts), leaderboard (/leaderboard), settings (/settings)
 
 ### Key Design Decisions
 - No external web framework — uses `net/http` directly
