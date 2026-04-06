@@ -25,6 +25,8 @@ go.work.sum
 
 # Claude Code
 .claude
+.agents/
+skills-lock.json
 
 # Web frontend
 web/node_modules/
