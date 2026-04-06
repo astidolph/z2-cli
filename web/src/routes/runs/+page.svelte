@@ -59,7 +59,7 @@
 	{:else if error}
 		<p class="status error">{error}</p>
 	{:else if data}
-		<SummaryCard summary={data.current} label="Summary ({data.weeks_back} weeks)" trend={data.ef_trend} />
+		<SummaryCard summary={data.current} label={data.year ? `Summary (${data.year})` : `Summary (${data.weeks_back} weeks)`} trend={data.ef_trend} />
 
 		{#if data.current_runs?.length}
 			<div class="card">

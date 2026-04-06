@@ -27,6 +27,7 @@ export interface RunsResponse {
 	prior: Summary;
 	zone2_hr: number;
 	weeks_back: number;
+	year?: number;
 	ef_trend: number;
 }
 

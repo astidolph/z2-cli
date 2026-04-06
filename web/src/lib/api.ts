@@ -45,8 +45,11 @@ async function post<T>(path: string): Promise<T> {
 
 export interface RunsParams {
 	weeks?: number;
+	year?: number;
 	day?: string;
 	minDistance?: number;
+	maxDistance?: number;
+	maxHR?: number;
 	all?: boolean;
 	sort?: string;
 	asc?: boolean;
@@ -56,8 +59,11 @@ export interface RunsParams {
 function buildQuery(params: RunsParams): string {
 	const q = new URLSearchParams();
 	if (params.weeks) q.set('weeks', String(params.weeks));
+	if (params.year) q.set('year', String(params.year));
 	if (params.day) q.set('day', params.day);
 	if (params.minDistance) q.set('minDistance', String(params.minDistance));
+	if (params.maxDistance) q.set('maxDistance', String(params.maxDistance));
+	if (params.maxHR) q.set('maxHR', String(params.maxHR));
 	if (params.all) q.set('all', 'true');
 	if (params.sort) q.set('sort', params.sort);
 	if (params.asc) q.set('asc', 'true');
@@ -91,8 +97,11 @@ const KM_TO_METERS = 1000;
 export function filtersToRunsParams(f: GlobalFilters, extra?: Pick<RunsParams, 'sort' | 'asc'>): RunsParams {
 	const p: RunsParams = {};
 	if (f.weeks > 0) p.weeks = f.weeks;
+	if (f.year > 0) p.year = f.year;
 	if (f.day) p.day = f.day;
 	if (f.minDistance > 0) p.minDistance = f.minDistance;
+	if (f.maxDistance > 0) p.maxDistance = f.maxDistance;
+	if (f.maxHR > 0) p.maxHR = f.maxHR;
 	if (f.showAll) p.all = true;
 	if (extra?.sort) p.sort = extra.sort;
 	if (extra?.asc) p.asc = extra.asc;

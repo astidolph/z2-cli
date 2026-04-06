@@ -13,8 +13,11 @@ import (
 
 type RunsQuery struct {
 	WeeksBack    int
+	Year         int     // 0 means use WeeksBack; >0 filters to a calendar year
 	Day          string
 	MinDistance   float64
+	MaxDistance   float64
+	MaxHR        float64 // additional HR ceiling (independent of zone2 filter)
 	ShowAll      bool
 	SortBy       string
 	Ascending    bool
@@ -28,12 +31,20 @@ type RunsResult struct {
 	Prior       stats.Summary     `json:"prior"`
 	Zone2HR     int               `json:"zone2_hr"`
 	WeeksBack   int               `json:"weeks_back"`
+	Year        int               `json:"year,omitempty"`
 }
 
 func FetchRuns(query RunsQuery) (*RunsResult, error) {
-	now := time.Now()
-	since := now.AddDate(0, 0, -query.WeeksBack*7)
-	priorSince := since.AddDate(0, 0, -query.WeeksBack*7)
+	// Determine time boundaries based on year vs weeks mode
+	var since, priorSince time.Time
+	if query.Year > 0 {
+		since = time.Date(query.Year, 1, 1, 0, 0, 0, 0, time.Local)
+		priorSince = time.Date(query.Year-1, 1, 1, 0, 0, 0, 0, time.Local)
+	} else {
+		now := time.Now()
+		since = now.AddDate(0, 0, -query.WeeksBack*7)
+		priorSince = since.AddDate(0, 0, -query.WeeksBack*7)
+	}
 
 	runs, err := fetchActivities(priorSince, query.ForceRefresh)
 	if err != nil {
@@ -52,6 +63,10 @@ func FetchRuns(query RunsQuery) (*RunsResult, error) {
 		runs = strava.FilterByMinDistance(runs, query.MinDistance)
 	}
 
+	if query.MaxDistance > 0 {
+		runs = strava.FilterByMaxDistance(runs, query.MaxDistance)
+	}
+
 	var zone2HR int
 	if !query.ShowAll {
 		config, err := auth.LoadConfig()
@@ -65,16 +80,26 @@ func FetchRuns(query RunsQuery) (*RunsResult, error) {
 		runs = strava.FilterByMaxHR(runs, float64(config.Zone2HR))
 	}
 
+	if query.MaxHR > 0 {
+		runs = strava.FilterByMaxHR(runs, query.MaxHR)
+	}
+
 	var currentRuns, priorRuns []strava.Activity
-	for _, r := range runs {
-		t, err := r.StartTime()
-		if err != nil {
-			continue
-		}
-		if t.After(since) {
-			currentRuns = append(currentRuns, r)
-		} else {
-			priorRuns = append(priorRuns, r)
+	if query.Year > 0 {
+		// Year mode: current = target year, prior = previous year
+		currentRuns = strava.FilterByYear(runs, query.Year)
+		priorRuns = strava.FilterByYear(runs, query.Year-1)
+	} else {
+		for _, r := range runs {
+			t, err := r.StartTime()
+			if err != nil {
+				continue
+			}
+			if t.After(since) {
+				currentRuns = append(currentRuns, r)
+			} else {
+				priorRuns = append(priorRuns, r)
+			}
 		}
 	}
 
@@ -89,6 +114,7 @@ func FetchRuns(query RunsQuery) (*RunsResult, error) {
 		Prior:       stats.Summarise(priorRuns),
 		Zone2HR:     zone2HR,
 		WeeksBack:   query.WeeksBack,
+		Year:        query.Year,
 	}, nil
 }
 

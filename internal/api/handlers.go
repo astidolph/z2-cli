@@ -338,6 +338,14 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 		}
 		query.WeeksBack = n
 	}
+	if v := q.Get("year"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 2000 {
+			return query, fmt.Errorf("invalid year parameter")
+		}
+		query.Year = n
+		query.WeeksBack = 0 // year takes precedence
+	}
 	if v := q.Get("day"); v != "" {
 		query.Day = v
 	}
@@ -347,6 +355,20 @@ func parseRunsQuery(r *http.Request) (service.RunsQuery, error) {
 			return query, fmt.Errorf("invalid minDistance parameter")
 		}
 		query.MinDistance = f
+	}
+	if v := q.Get("maxDistance"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 {
+			return query, fmt.Errorf("invalid maxDistance parameter")
+		}
+		query.MaxDistance = f
+	}
+	if v := q.Get("maxHR"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f <= 0 {
+			return query, fmt.Errorf("invalid maxHR parameter")
+		}
+		query.MaxHR = f
 	}
 	if v := q.Get("all"); v == "true" {
 		query.ShowAll = true

@@ -48,8 +48,8 @@
 		<p class="status error">{error}</p>
 	{:else if runs}
 		<div class="summaries">
-			<SummaryCard summary={runs.current} label="Current ({runs.weeks_back} weeks)" trend={runs.ef_trend} />
-			<SummaryCard summary={runs.prior} label="Prior ({runs.weeks_back} weeks)" />
+			<SummaryCard summary={runs.current} label={runs.year ? `${runs.year}` : `Current (${runs.weeks_back} weeks)`} trend={runs.ef_trend} />
+			<SummaryCard summary={runs.prior} label={runs.year ? `${runs.year - 1}` : `Prior (${runs.weeks_back} weeks)`} />
 		</div>
 
 		{#if chartData?.dates?.length}
