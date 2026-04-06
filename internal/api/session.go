@@ -9,6 +9,15 @@ import (
 	"strings"
 )
 
+// isSecureOrigin returns true when the cookie Secure flag should be set.
+// Prefers BASE_URL when available, falls back to X-Forwarded-Proto.
+func isSecureOrigin(r *http.Request) bool {
+	if base := baseURL(); base != "" {
+		return strings.HasPrefix(base, "https://")
+	}
+	return r.Header.Get("X-Forwarded-Proto") == "https"
+}
+
 var sessionKey []byte
 
 func init() {
@@ -38,17 +47,13 @@ func signSession() string {
 }
 
 func setSessionCookie(w http.ResponseWriter, r *http.Request) {
-	scheme := r.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		scheme = "http"
-	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    signSession(),
 		Path:     "/",
 		MaxAge:   86400 * 7, // 7 days
 		HttpOnly: true,
-		Secure:   scheme == "https",
+		Secure:   isSecureOrigin(r),
 		SameSite: http.SameSiteLaxMode,
 	})
 }

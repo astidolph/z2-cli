@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -17,12 +18,22 @@ import (
 	"github.com/z2-cli/internal/stats"
 )
 
-// frontendOrigin extracts the origin (scheme://host) that the user's browser
-// is on, so post-auth redirects land on the frontend (which may be the Vite
-// dev server on a different port). The Referer-based origin is only trusted
-// if it shares the same hostname as the request (allowing different ports
-// for local development).
+// baseURL returns the canonical origin for the application. When BASE_URL is
+// set (recommended for production), it is used directly — this avoids trusting
+// request headers like X-Forwarded-Proto or Referer.
+func baseURL() string {
+	return os.Getenv("BASE_URL")
+}
+
+// frontendOrigin returns the origin (scheme://host) for post-auth redirects.
+// In production BASE_URL is authoritative. In local development, the Referer
+// header is accepted only when its hostname matches the request hostname
+// (allowing the Vite dev server on a different port).
 func frontendOrigin(r *http.Request) string {
+	if base := baseURL(); base != "" {
+		return strings.TrimRight(base, "/")
+	}
+
 	requestHost := stripPort(r.Host)
 
 	if ref := r.Header.Get("Referer"); ref != "" {
@@ -54,12 +65,21 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build redirect URI from the incoming request
-	scheme := r.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		scheme = "http"
+	origin := frontendOrigin(r)
+	secure := strings.HasPrefix(origin, "https://")
+
+	// Build redirect URI — use the canonical origin when BASE_URL is set,
+	// otherwise derive from the request (local development only).
+	var redirectURI string
+	if base := baseURL(); base != "" {
+		redirectURI = strings.TrimRight(base, "/") + "/api/auth/callback"
+	} else {
+		scheme := r.Header.Get("X-Forwarded-Proto")
+		if scheme == "" {
+			scheme = "http"
+		}
+		redirectURI = scheme + "://" + r.Host + "/api/auth/callback"
 	}
-	redirectURI := scheme + "://" + r.Host + "/api/auth/callback"
 
 	// Generate state and sign it with client secret for CSRF protection
 	state := auth.GenerateState()
@@ -71,7 +91,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/api/auth/callback",
 		MaxAge:   300,
 		HttpOnly: true,
-		Secure:   scheme == "https",
+		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -79,11 +99,11 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	// (important when the Vite dev server is on a different port).
 	http.SetCookie(w, &http.Cookie{
 		Name:     "z2_auth_origin",
-		Value:    frontendOrigin(r),
+		Value:    origin,
 		Path:     "/api/auth/callback",
 		MaxAge:   300,
 		HttpOnly: true,
-		Secure:   scheme == "https",
+		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -92,10 +112,13 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
-	// Read the frontend origin saved during login so redirects land on the
-	// correct host (e.g. Vite dev server on :5173 vs Go server on :8080).
+	// Determine redirect origin. When BASE_URL is set, always use it (ignore
+	// the cookie to prevent open-redirect attacks). In local dev, fall back
+	// to the cookie value saved during login.
 	origin := ""
-	if c, err := r.Cookie("z2_auth_origin"); err == nil {
+	if base := baseURL(); base != "" {
+		origin = strings.TrimRight(base, "/")
+	} else if c, err := r.Cookie("z2_auth_origin"); err == nil {
 		origin = c.Value
 	}
 	settingsRedirect := func(query string) string {

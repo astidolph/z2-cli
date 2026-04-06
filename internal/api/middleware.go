@@ -1,6 +1,9 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 // securityHeaders adds standard security headers to all responses.
 func securityHeaders(next http.Handler) http.Handler {
@@ -10,9 +13,13 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
 		// HSTS: tell browsers to always use HTTPS (1 year).
-		// Fly.io terminates TLS, so the backend sees HTTP, but the
+		// Render terminates TLS, so the backend sees HTTP, but the
 		// header is forwarded to the browser over the HTTPS connection.
-		if r.Header.Get("X-Forwarded-Proto") == "https" {
+		if base := baseURL(); base != "" {
+			if strings.HasPrefix(base, "https://") {
+				w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+		} else if r.Header.Get("X-Forwarded-Proto") == "https" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 
