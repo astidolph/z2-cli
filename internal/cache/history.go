@@ -1,67 +1,25 @@
 package cache
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
-	"time"
 
+	"github.com/z2-cli/internal/model"
+	"github.com/z2-cli/internal/storage"
 	"github.com/z2-cli/internal/strava"
 )
 
-type HistoryData struct {
-	Activities []strava.Activity `json:"activities"`
-	// NewestDate is the start time of the most recent cached activity,
-	// used as the "after" parameter for incremental syncs.
-	NewestDate time.Time `json:"newest_date"`
-}
+// HistoryData is an alias for model.HistoryData, preserving backward compatibility.
+type HistoryData = model.HistoryData
 
-func historyPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("could not find home directory: %w", err)
-	}
-	dir := filepath.Join(home, ".z2-cli")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", fmt.Errorf("could not create config directory: %w", err)
-	}
-	return filepath.Join(dir, "history.json"), nil
-}
-
-// LoadHistory reads the full history cache from disk.
-// Returns nil if the file does not exist or cannot be parsed.
+// LoadHistory reads the full history cache.
+// Returns nil if not found or cannot be parsed.
 func LoadHistory() *HistoryData {
-	path, err := historyPath()
-	if err != nil {
-		return nil
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil
-	}
-	var history HistoryData
-	if err := json.Unmarshal(data, &history); err != nil {
-		return nil
-	}
-	return &history
+	return storage.Get().LoadHistory()
 }
 
-// SaveHistory writes the full history cache to disk.
+// SaveHistory writes the full history cache.
 func SaveHistory(history *HistoryData) error {
-	path, err := historyPath()
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(history, "", "  ")
-	if err != nil {
-		return fmt.Errorf("could not marshal history: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		return fmt.Errorf("could not save history: %w", err)
-	}
-	return nil
+	return storage.Get().SaveHistory(history)
 }
 
 // AppendHistory merges new activities into the existing history, deduplicating
