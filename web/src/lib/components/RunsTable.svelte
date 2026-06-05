@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { Activity } from '$lib/types';
 	import { formatDate, formatDistance, formatDuration, formatHR, formatPace, efficiencyFactor, formatEF } from '$lib/format';
+	import Tooltip from '$lib/components/Tooltip.svelte';
+
+	const EF_TIP = 'Efficiency Factor: speed ÷ heart rate × 1000. Higher = running faster at the same effort. A rising score means your aerobic fitness is improving.';
 
 	let { runs }: { runs: Activity[] } = $props();
 </script>
@@ -15,7 +18,7 @@
 				<th>Time</th>
 				<th>Avg HR</th>
 				<th>Pace</th>
-				<th>EF</th>
+				<th>EF<Tooltip text={EF_TIP} /></th>
 			</tr>
 		</thead>
 		<tbody>

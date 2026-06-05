@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { Summary } from '$lib/types';
 	import { formatTotalDistance, formatPace, formatEF, formatHR } from '$lib/format';
+	import Tooltip from '$lib/components/Tooltip.svelte';
+
+	const EF_TIP = 'Efficiency Factor: speed ÷ heart rate × 1000. Higher = running faster at the same effort. A rising score means your aerobic fitness is improving.';
 
 	let { summary, label, trend }: { summary: Summary; label: string; trend?: number } = $props();
 </script>
@@ -18,7 +21,7 @@
 		</div>
 		<div class="stat">
 			<span class="stat-value">{formatEF(summary.avg_ef)}</span>
-			<span class="stat-label">Avg EF</span>
+			<span class="stat-label">Avg EF<Tooltip text={EF_TIP} /></span>
 			{#if trend !== undefined && trend !== 0}
 				<span class="trend" class:positive={trend > 0} class:negative={trend < 0}>
 					{trend > 0 ? '+' : ''}{trend.toFixed(1)}%

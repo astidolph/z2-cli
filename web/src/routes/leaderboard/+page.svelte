@@ -3,6 +3,9 @@
 	import { getFilters } from '$lib/filters.svelte';
 	import type { LeaderboardResponse } from '$lib/types';
 	import { formatDate, formatDistance, formatDuration, formatHR, formatPace, efficiencyFactor, formatEF } from '$lib/format';
+	import Tooltip from '$lib/components/Tooltip.svelte';
+
+	const EF_TIP = 'Efficiency Factor: speed ÷ heart rate × 1000. Higher = running faster at the same effort. Runs are ranked from highest to lowest EF.';
 
 	const filters = getFilters();
 
@@ -95,7 +98,7 @@
 								<th>Time</th>
 								<th>Avg HR</th>
 								<th>Pace</th>
-								<th>EF</th>
+								<th>EF<Tooltip text={EF_TIP} /></th>
 							</tr>
 						</thead>
 						<tbody>

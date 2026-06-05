@@ -4,6 +4,7 @@
 	import type { RunsResponse, ChartDataResponse } from '$lib/types';
 	import SummaryCard from '$lib/components/SummaryCard.svelte';
 	import LineChart from '$lib/components/LineChart.svelte';
+	import InfoCard from '$lib/components/InfoCard.svelte';
 
 	const filters = getFilters();
 
@@ -43,6 +44,8 @@
 		<button class="btn" onclick={refresh}>Refresh</button>
 	</div>
 
+	<InfoCard />
+
 	{#if loading}
 		<p class="status">Loading...</p>
 	{:else if error}
@@ -58,10 +61,10 @@
 				<LineChart
 					labels={chartData.dates}
 					datasets={[
-						{ label: 'EF', data: chartData.ef ?? [], color: '#7c6ef0' },
+						{ label: 'EF (×1000)', data: chartData.ef ?? [], color: '#7c6ef0' },
 						{ label: 'Avg HR', data: chartData.hr ?? [], color: '#f87171', yAxisID: 'y2' }
 					]}
-					title="Efficiency Factor & Heart Rate"
+					title="Efficiency Factor (×1000) & Heart Rate"
 					dualAxis={true}
 					secondAxisLabel="HR (bpm)"
 				/>
