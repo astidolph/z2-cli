@@ -30,7 +30,7 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatEF(ef: number): string {
-	return ef.toFixed(4);
+	return (ef * 1000).toFixed(2);
 }
 
 export function formatHR(hr: number): string {

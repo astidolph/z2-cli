@@ -41,10 +41,10 @@
 			<LineChart
 				labels={chartData.dates}
 				datasets={[
-					{ label: 'EF', data: chartData.ef ?? [], color: '#7c6ef0' },
+					{ label: 'EF (×1000)', data: chartData.ef ?? [], color: '#7c6ef0' },
 					{ label: 'Avg HR', data: chartData.hr ?? [], color: '#f87171', yAxisID: 'y2' }
 				]}
-				title="Efficiency Factor & Heart Rate"
+				title="Efficiency Factor (×1000) & Heart Rate"
 				dualAxis={true}
 				secondAxisLabel="HR (bpm)"
 			/>

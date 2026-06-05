@@ -90,7 +90,7 @@ func printRunsTable(runs []strava.Activity) {
 		ef := stats.EfficiencyFactor(r)
 		efStr := "—"
 		if ef > 0 {
-			efStr = fmt.Sprintf("%.4f", ef)
+			efStr = fmt.Sprintf("%.2f", ef*1000)
 		}
 
 		fmt.Fprintf(w, "%s\t%.2f\t%.2f\t%s\t%s\t%s\t%s\t%s\n", date, distKm, distMi, duration, hr, paceKm, paceMi, efStr)
@@ -105,7 +105,7 @@ func printSummary(result *service.RunsResult) {
 	fmt.Printf("\nSummary (last %d weeks, %d runs, %.1f km / %.1f mi total):\n", result.WeeksBack, cur.Count, cur.TotalKm, totalMi)
 
 	if cur.AvgEF > 0 {
-		efLine := fmt.Sprintf("  Avg EF:   %.4f", cur.AvgEF)
+		efLine := fmt.Sprintf("  Avg EF:   %.2f", cur.AvgEF*1000)
 		if result.Prior.AvgEF > 0 {
 			trend := stats.TrendPercent(cur, result.Prior)
 			arrow := "→"

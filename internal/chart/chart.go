@@ -40,7 +40,7 @@ func BuildChartData(runs []strava.Activity) ChartData {
 		data.Dates = append(data.Dates, t.Format("02 Jan 06"))
 
 		ef := stats.EfficiencyFactor(r)
-		data.EF = append(data.EF, opts.LineData{Value: fmt.Sprintf("%.4f", ef)})
+		data.EF = append(data.EF, opts.LineData{Value: fmt.Sprintf("%.2f", ef*1000)})
 
 		if r.Distance > 0 && r.MovingTime > 0 {
 			paceKm := float64(r.MovingTime) / (r.Distance / 1000.0) / 60.0
@@ -105,9 +105,9 @@ func RenderEF(w io.Writer, data ChartData) error {
 			Title: "Efficiency Factor & Heart Rate Over Time",
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
-			Name:      "EF (speed/HR)",
-			Min:       fmt.Sprintf("%.4f", efMin),
-			Max:       fmt.Sprintf("%.4f", efMax),
+			Name:      "EF (×1000)",
+			Min:       fmt.Sprintf("%.2f", efMin),
+			Max:       fmt.Sprintf("%.2f", efMax),
 			AxisLabel: &opts.AxisLabel{Formatter: "{value}"},
 		}),
 		charts.WithTooltipOpts(opts.Tooltip{
